@@ -57,14 +57,8 @@ jobs:
         name: "PowerDocu-Release-selfcontained"
         path: PowerDocu-Release-selfcontained
         
-    - name: Display structure of downloaded files
-      run: ls -R
-      
     - name: Create release zip
-      run: zip -r -q PowerDocu-Release-selfcontained.zip PowerDocu-Release-selfcontained/
-    
-    - name: Display structure of downloaded files
-      run: ls -R
+      run: zip -r PowerDocu-Release-selfcontained.zip PowerDocu-Release-selfcontained/*
     
     - name: Bump version and push tag
       id: tag_version
