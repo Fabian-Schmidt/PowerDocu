@@ -9,14 +9,11 @@ on:
 jobs:
 
   build:
-
     strategy:
       matrix:
         Configuration: [Release]
-
     runs-on: ubuntu-latest   # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -42,13 +39,15 @@ jobs:
       run: dotnet publish --configuration ${{ matrix.configuration }} -r win-x64 --self-contained true "PowerDocu.GUI"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: PowerDocu-${{ matrix.configuration }}-selfcontained
         path: PowerDocu.GUI/bin/${{ matrix.configuration }}/net8.0-windows/win-x64/publish/
         if-no-files-found: error
+
   release:
     if: github.ref == 'refs/heads/main'
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -56,6 +55,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: PowerDocu-Release-selfcontained
+  
     - uses: ncipollo/release-action@v1
       with:
         draft: true
