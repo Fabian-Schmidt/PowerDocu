@@ -65,7 +65,7 @@ jobs:
       with:
         draft: true
         prerelease: true
-        artifacts: "*"
+        artifacts: "PowerDocu-Release-selfcontained/*"
         tag: ${{ steps.tag_version.outputs.new_tag }}
         name: Release ${{ steps.tag_version.outputs.new_tag }}
 
