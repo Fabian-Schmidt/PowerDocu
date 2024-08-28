@@ -58,7 +58,8 @@ jobs:
         path: PowerDocu-Release-selfcontained
         
     - name: Create release zip
-      run: zip -r PowerDocu-Release-selfcontained.zip PowerDocu-Release-selfcontained/*
+      working-directory: PowerDocu-Release-selfcontained
+      run: zip -r ../PowerDocu-Release-selfcontained.zip *
     
     - name: Bump version and push tag
       id: tag_version
