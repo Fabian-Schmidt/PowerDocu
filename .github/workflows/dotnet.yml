@@ -47,3 +47,20 @@ jobs:
         name: PowerDocu-${{ matrix.configuration }}-selfcontained
         path: PowerDocu.GUI/bin/${{ matrix.configuration }}/net8.0-windows/win-x64/publish/
         if-no-files-found: error
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: PowerDocu-Release-selfcontained
+    - uses: ncipollo/release-action@v1
+      with:
+        draft: true
+        prerelease: true
+        artifacts: "PowerDocu-Release-selfcontained.zip"
+
+        
+    
