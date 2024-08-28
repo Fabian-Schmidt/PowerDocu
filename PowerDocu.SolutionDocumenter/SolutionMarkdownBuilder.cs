@@ -12,11 +12,13 @@ namespace PowerDocu.SolutionDocumenter
         private readonly SolutionDocumentationContent content;
         private readonly string solutionDocumentFileName;
         private readonly MdDocument solutionDoc;
+        private readonly Dictionary<string, MdDocument> tablesDocs = new();
+
         public SolutionMarkdownBuilder(SolutionDocumentationContent contentDocumentation)
         {
             content = contentDocumentation;
             Directory.CreateDirectory(content.folderPath);
-            solutionDocumentFileName = ("solution " + content.filename + ".md").Replace(" ", "-");
+            solutionDocumentFileName = "index.md".Replace(" ", "-");
             solutionDoc = new MdDocument();
 
             addSolutionOverview();
@@ -366,15 +368,20 @@ namespace PowerDocu.SolutionDocumenter
         {
             var dataverseGraphBuilder = new DataverseGraphBuilder(content);
             solutionDoc.Root.Add(new MdHeading("Tables", 3));
+            var navItems = new List<MdListItem>();
             foreach (var tableEntity in content.solution.Customizations.getEntities())
             {
-                solutionDoc.Root.Add(new MdHeading(tableEntity.getLocalizedName() + " (" + tableEntity.getName() + ")", 4));
+                var tableDoc = new MdDocument();
+                var tableDocFileName = CharsetHelper.GetSafeName(tableEntity.getName()) + ".md";
+                tablesDocs[tableEntity.getName()] = tableDoc;
+
+                tableDoc.Root.Add(new MdHeading(tableEntity.getLocalizedName() + " (" + tableEntity.getName() + ")", 4));
                 var tableRows = new List<MdTableRow>
                 {
                     new MdTableRow("Primary Column", tableEntity.getPrimaryColumn()),
                     new MdTableRow("Description", tableEntity.getDescription())
                 };
-                solutionDoc.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
+                tableDoc.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
                 tableRows = new List<MdTableRow>();
 
                 if (tableEntity.GetColumns().Count > 0)
@@ -390,9 +397,14 @@ namespace PowerDocu.SolutionDocumenter
                                                     columnEntity.isSearchable().ToString()
                                                     ));
                     }
-                    solutionDoc.Root.Add(new MdTable(new MdTableRow("Display Name", "Name", "Data type", "Customizable", "Required", "Searchable"), tableRows));
+                    tableDoc.Root.Add(new MdTable(new MdTableRow("Display Name", "Name", "Data type", "Customizable", "Required", "Searchable"), tableRows));
                 }
+
+                tableDoc.Save(content.folderPath + "/" + tableDocFileName);
+                navItems.Add(new MdListItem(new MdLinkSpan(tableEntity.getName(), tableDocFileName)));
             }
+            solutionDoc.Root.Add(new MdBulletList(navItems));
+
             solutionDoc.Root.Add(new MdHeading("Table Relationships", 4));
             solutionDoc.Root.Add(new MdParagraph(new MdImageSpan("Dataverse Table Relationships", "dataverse.svg")));
         }
