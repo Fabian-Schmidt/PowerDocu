@@ -56,8 +56,11 @@ jobs:
       with:
         name: "PowerDocu-Release-selfcontained"
         
+    - name: Display structure of downloaded files
+      run: ls -R
+      
     - name: Create release zip
-      run: zip -r -q PowerDocu-Release-selfcontained.zip PowerDocu-Release-selfcontained
+      run: zip -r -q PowerDocu-Release-selfcontained.zip PowerDocu-Release-selfcontained/
     
     - name: Display structure of downloaded files
       run: ls -R
