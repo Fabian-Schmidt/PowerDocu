@@ -1,0 +1,54 @@
+name: dotnet build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        Configuration: [Release]
+
+    runs-on: ubuntu-latest   # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: true
+
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Install dependencies
+      run: dotnet restore
+      
+    - name: Execute unit tests
+      run: dotnet test
+
+    - name: Run build
+      run: dotnet build --configuration $env:Configuration --no-restore "PowerDocu.GUI"
+      env:
+        Configuration: ${{ matrix.configuration }}
+      
+    - name: Run publish
+      run: dotnet publish --configuration $env:Configuration -r win-x64 --self-contained true "PowerDocu.GUI"
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: PowerDocu-selfcontained
+        path: PowerDocu.GUI\bin\$env:configuration\net8.0-windows\win-x64
+      env:
+        Configuration: ${{ matrix.configuration }}
