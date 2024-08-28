@@ -44,5 +44,6 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: PowerDocu-selfcontained
-        path: PowerDocu\PowerDocu.GUI\bin\${{ matrix.configuration }}\net8.0-windows\win-x64\publish\
+        name: PowerDocu-${{ matrix.configuration }}-selfcontained
+        path: PowerDocu.GUI/bin/${{ matrix.configuration }}/net8.0-windows/win-x64/publish/
+        if-no-files-found: error
