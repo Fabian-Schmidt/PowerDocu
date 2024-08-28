@@ -1,12 +1,12 @@
+using Grynwald.MarkdownGenerator;
+using PowerDocu.Common;
+using Svg;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using PowerDocu.Common;
-using Grynwald.MarkdownGenerator;
-using Svg;
 
 namespace PowerDocu.AppDocumenter
 {
@@ -20,9 +20,9 @@ namespace PowerDocu.AppDocumenter
         private readonly DocumentSet<MdDocument> set;
         private MdTable metadataTable;
         private readonly int appLogoWidth = 250;
-        private bool documentChangedDefaultsOnly;
-        private bool showDefaults;
-        private bool documentSampleData;
+        private readonly bool documentChangedDefaultsOnly;
+        private readonly bool showDefaults;
+        private readonly bool documentSampleData;
 
         public AppMarkdownBuilder(AppDocumentationContent contentdocumentation, bool documentChangedDefaultsOnly = false, bool showDefaults = true, bool documentSampleData = false)
         {
@@ -43,14 +43,14 @@ namespace PowerDocu.AppDocumenter
             variablesDocument = set.CreateMdDocument(variablesDocumentFileName);
             dataSourcesDocument = set.CreateMdDocument(dataSourcesFileName);
             //a dedicated document for each datasource
-            foreach (DataSource datasource in content.appDataSources.dataSources.OrderBy(o => o.Name).ToList())
+            foreach (var datasource in content.appDataSources.dataSources.OrderBy(o => o.Name).ToList())
             {
                 datasourcesDocuments.Add(datasource.Name, set.CreateMdDocument(("datasource " + datasource.Name + " " + content.filename + ".md").Replace(" ", "-")));
             }
             resourcesDocument = set.CreateMdDocument(resourcesFileName);
             controlsDocument = set.CreateMdDocument(controlsFileName);
             //a dedicated document for each screen
-            foreach (ControlEntity screen in contentdocumentation.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
+            foreach (var screen in contentdocumentation.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
             {
                 screenDocuments.Add(screen.Name, set.CreateMdDocument(("screen " + screen.Name + " " + content.filename + ".md").Replace(" ", "-")));
             }
@@ -68,9 +68,9 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppOverview()
         {
-            List<MdTableRow> tableRows = new List<MdTableRow>();
+            var tableRows = new List<MdTableRow>();
             mainDocument.Root.Add(new MdHeading(content.appProperties.headerAppStatistics, 2));
-            foreach (KeyValuePair<string, string> kvp2 in content.appProperties.statisticsTable)
+            foreach (var kvp2 in content.appProperties.statisticsTable)
             {
                 tableRows.Add(new MdTableRow(kvp2.Key, kvp2.Value));
             }
@@ -79,7 +79,7 @@ namespace PowerDocu.AppDocumenter
 
         private MdBulletList getNavigationLinks(bool topLevel = true)
         {
-            MdListItem[] navItems = new MdListItem[] {
+            var navItems = new MdListItem[] {
                 new MdListItem(new MdLinkSpan("Overview", topLevel ? mainDocumentFileName : "../" + mainDocumentFileName)),
                 new MdListItem(new MdLinkSpan("App Details", topLevel ? appDetailsFileName : "../" + appDetailsFileName)),
                 new MdListItem(new MdLinkSpan("Variables", topLevel ? variablesDocumentFileName : "../" + variablesDocumentFileName)),
@@ -92,23 +92,23 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppMetadata()
         {
-            List<MdTableRow> tableRows = new List<MdTableRow>
+            var tableRows = new List<MdTableRow>
             {
                 new MdTableRow("App Name", content.Name)
             };
             if (!String.IsNullOrEmpty(content.appProperties.appLogo))
             {
-                if (content.ResourceStreams.TryGetValue(content.appProperties.appLogo, out MemoryStream resourceStream))
+                if (content.ResourceStreams.TryGetValue(content.appProperties.appLogo, out var resourceStream))
                 {
                     Directory.CreateDirectory(content.folderPath + "resources");
                     Bitmap appLogo;
                     if (!String.IsNullOrEmpty(content.appProperties.appBackgroundColour))
                     {
-                        Color c = ColorTranslator.FromHtml(ColourHelper.ParseColor(content.appProperties.appBackgroundColour));
-                        Bitmap bmp = new Bitmap(resourceStream);
+                        var c = ColorTranslator.FromHtml(ColourHelper.ParseColor(content.appProperties.appBackgroundColour));
+                        var bmp = new Bitmap(resourceStream);
                         appLogo = new Bitmap(bmp.Width, bmp.Height);
-                        Rectangle rect = new Rectangle(Point.Empty, bmp.Size);
-                        using (Graphics G = Graphics.FromImage(appLogo))
+                        var rect = new Rectangle(Point.Empty, bmp.Size);
+                        using (var G = Graphics.FromImage(appLogo))
                         {
                             G.Clear(c);
                             G.DrawImageUnscaledAndClipped(bmp, rect);
@@ -125,7 +125,7 @@ namespace PowerDocu.AppDocumenter
                     resourceStream.Position = 0;
                     if (appLogo.Width > appLogoWidth)
                     {
-                        Bitmap resized = new Bitmap(appLogo, new Size(appLogoWidth, appLogoWidth * appLogo.Height / appLogo.Width));
+                        var resized = new Bitmap(appLogo, new Size(appLogoWidth, appLogoWidth * appLogo.Height / appLogo.Width));
                         resized.Save(content.folderPath + @"resources\applogoSmall.png");
                         tableRows.Add(new MdTableRow("App Logo", new MdImageSpan("App Logo", "resources/applogoSmall.png")));
                     }
@@ -135,10 +135,14 @@ namespace PowerDocu.AppDocumenter
                     }
                 }
             }
-            tableRows.Add(new MdTableRow(content.appProperties.headerDocumentationGenerated, DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString()));
+            if (!CommandLineHelper.NoTimestamp)
+            {
+                tableRows.Add(new MdTableRow(content.appProperties.headerDocumentationGenerated, DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString()));
+            }
+
             metadataTable = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
             // prepare the common sections for all documents
-            foreach (MdDocument doc in set.Documents)
+            foreach (var doc in set.Documents)
             {
                 doc.Root.Add(new MdHeading(content.appProperties.header, 1));
                 doc.Root.Add(metadataTable);
@@ -148,9 +152,9 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppDetails()
         {
-            List<MdTableRow> tableRows = new List<MdTableRow>();
+            var tableRows = new List<MdTableRow>();
             appDetailsDocument.Root.Add(new MdHeading(content.appProperties.headerAppProperties, 2));
-            foreach (Expression property in content.appProperties.appProperties)
+            foreach (var property in content.appProperties.appProperties)
             {
                 if (!content.appProperties.propertiesToSkip.Contains(property.expressionOperator))
                 {
@@ -181,15 +185,15 @@ namespace PowerDocu.AppDocumenter
             variablesDocument.Root.Add(new MdHeading(content.appVariablesInfo.header, 2));
             variablesDocument.Root.Add(new MdParagraph(new MdTextSpan(content.appVariablesInfo.infoText)));
             variablesDocument.Root.Add(new MdHeading(content.appVariablesInfo.headerGlobalVariables, 3));
-            foreach (string var in content.appVariablesInfo.globalVariables)
+            foreach (var var in content.appVariablesInfo.globalVariables)
             {
                 variablesDocument.Root.Add(new MdHeading(var, 4));
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out List<ControlPropertyReference> references);
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out var references);
                 if (references != null)
                 {
                     variablesDocument.Root.Add(new MdParagraph(new MdTextSpan("Variable used in:")));
-                    List<MdTableRow> tableRows = new List<MdTableRow>();
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    var tableRows = new List<MdTableRow>();
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         //link to the screen instead of the control directly for the moment, as the directly generated anchor link (#" + control.Name.ToLower()) doesn't work the same way in DevOps and GitHub
                         tableRows.Add(new MdTableRow(new MdLinkSpan(reference.Control.Name + " (" + reference.Control.Screen()?.Name + ")",
@@ -200,15 +204,15 @@ namespace PowerDocu.AppDocumenter
                 }
             }
             variablesDocument.Root.Add(new MdHeading(content.appVariablesInfo.headerContextVariables, 3));
-            foreach (string var in content.appVariablesInfo.contextVariables)
+            foreach (var var in content.appVariablesInfo.contextVariables)
             {
                 variablesDocument.Root.Add(new MdHeading(var, 4));
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out List<ControlPropertyReference> references);
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out var references);
                 if (references != null)
                 {
                     variablesDocument.Root.Add(new MdParagraph(new MdTextSpan("Variable used in:")));
-                    List<MdTableRow> tableRows = new List<MdTableRow>();
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    var tableRows = new List<MdTableRow>();
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         tableRows.Add(new MdTableRow(reference.Control.Name + " (" + reference.Control.Screen()?.Name + ")", reference.RuleProperty));
                     }
@@ -216,15 +220,15 @@ namespace PowerDocu.AppDocumenter
                 }
             }
             variablesDocument.Root.Add(new MdHeading(content.appVariablesInfo.headerCollections, 3));
-            foreach (string var in content.appVariablesInfo.collections)
+            foreach (var var in content.appVariablesInfo.collections)
             {
                 variablesDocument.Root.Add(new MdHeading(var, 4));
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out List<ControlPropertyReference> references);
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out var references);
                 if (references != null)
                 {
                     variablesDocument.Root.Add(new MdParagraph(new MdTextSpan("Variable used in:")));
-                    List<MdTableRow> tableRows = new List<MdTableRow>();
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    var tableRows = new List<MdTableRow>();
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         tableRows.Add(new MdTableRow(reference.Control.Name + " (" + reference.Control.Screen()?.Name + ")", reference.RuleProperty));
                     }
@@ -238,7 +242,7 @@ namespace PowerDocu.AppDocumenter
             controlsDocument.Root.Add(new MdHeading(content.appControls.headerOverview, 2));
             controlsDocument.Root.Add(new MdParagraph(new MdTextSpan(content.appControls.infoTextScreens)));
             controlsDocument.Root.Add(new MdParagraph(new MdTextSpan(content.appControls.infoTextControls)));
-            foreach (ControlEntity control in content.appControls.controls.Where(o => o.Type != "appinfo"))
+            foreach (var control in content.appControls.controls.Where(o => o.Type != "appinfo"))
             {
                 controlsDocument.Root.Add(new MdHeading(new MdLinkSpan("Screen: " + control.Name, ("screen " + control.Name + " " + content.filename + ".md").Replace(" ", "-")), 3));
                 controlsDocument.Root.Add(CreateControlList(control));
@@ -257,14 +261,14 @@ namespace PowerDocu.AppDocumenter
                 bitmap?.Save(content.folderPath + @"resources\" + control.Type + ".png");
             }
             //link to the screen instead of the control directly for the moment, as the directly generated anchor link (#" + control.Name.ToLower()) doesn't work the same way in DevOps and GitHub
-            MdBulletList list = new MdBulletList(){
+            var list = new MdBulletList(){
                                      new MdListItem(new MdLinkSpan(
                                             new MdCompositeSpan(
                                                 new MdImageSpan(control.Type, "resources/"+control.Type+".png"),
                                                 new MdTextSpan(" "+control.Name))
                                         ,("screen " + control.Screen().Name + " " + content.filename + ".md").Replace(" ", "-")))};
 
-            foreach (ControlEntity child in control.Children.OrderBy(o => o.Name).ToList())
+            foreach (var child in control.Children.OrderBy(o => o.Name).ToList())
             {
                 list.Add(new MdListItem(CreateControlList(child)));
             }
@@ -273,12 +277,12 @@ namespace PowerDocu.AppDocumenter
 
         private void addDetailedAppControls()
         {
-            foreach (ControlEntity screen in content.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
+            foreach (var screen in content.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
             {
-                screenDocuments.TryGetValue(screen.Name, out MdDocument screenDoc);
+                screenDocuments.TryGetValue(screen.Name, out var screenDoc);
                 screenDoc.Root.Add(new MdHeading(screen.Name, 2));
                 addAppControlsTable(screen, screenDoc);
-                foreach (ControlEntity control in content.appControls.allControls.Where(o => o.Type != "appinfo" && o.Type != "screen" && screen.Equals(o.Screen())).OrderBy(o => o.Name).ToList())
+                foreach (var control in content.appControls.allControls.Where(o => o.Type != "appinfo" && o.Type != "screen" && screen.Equals(o.Screen())).OrderBy(o => o.Name).ToList())
                 {
                     screenDoc.Root.Add(new MdHeading(control.Name, 2));
                     addAppControlsTable(control, screenDoc);
@@ -288,8 +292,8 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppControlsTable(ControlEntity control, MdDocument screenDoc)
         {
-            Entity defaultEntity = DefaultChangeHelper.GetEntityDefaults(control.Type);
-            List<MdTableRow> tableRows = new List<MdTableRow>();
+            var defaultEntity = DefaultChangeHelper.GetEntityDefaults(control.Type);
+            var tableRows = new List<MdTableRow>();
             var svgDocument = SvgDocument.FromSvg<SvgDocument>(AppControlIcons.GetControlIcon(control.Type));
             //generating the PNG from the SVG with a width of 16px because some SVGs are huge and downscaled, thus can't be shown directly
             using (var bitmap = svgDocument.Draw(16, 0))
@@ -298,12 +302,15 @@ namespace PowerDocu.AppDocumenter
             }
             tableRows.Add(new MdTableRow(new MdImageSpan(control.Type, "resources/" + control.Type + ".png"), new MdTextSpan("Type: " + control.Type)));
 
-            string category = "";
-            foreach (Rule rule in control.Rules.OrderBy(o => o.Category).ThenBy(o => o.Property).ToList())
+            var category = "";
+            foreach (var rule in control.Rules.OrderBy(o => o.Category).ThenBy(o => o.Property).ToList())
             {
-                string defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
+                var defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
                 if (String.IsNullOrEmpty(defaultValue))
+                {
                     defaultValue = DefaultChangeHelper.DefaultValueIfUnknown;
+                }
+
                 if (!documentChangedDefaultsOnly || (defaultValue != rule.InvariantScript))
                 {
                     if (!content.ColourProperties.Contains(rule.Property))
@@ -330,18 +337,23 @@ namespace PowerDocu.AppDocumenter
                 }
             }
             if (tableRows.Count > 0)
+            {
                 screenDoc.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
+            }
             //Colour properties
             tableRows = new List<MdTableRow>();
             screenDoc.Root.Add(new MdHeading("Color Properties", 3));
-            foreach (string property in content.ColourProperties)
+            foreach (var property in content.ColourProperties)
             {
-                Rule rule = control.Rules.Find(o => o.Property == property);
+                var rule = control.Rules.Find(o => o.Property == property);
                 if (rule != null)
                 {
-                    string defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
+                    var defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
                     if (String.IsNullOrEmpty(defaultValue))
+                    {
                         defaultValue = DefaultChangeHelper.DefaultValueIfUnknown;
+                    }
+
                     if (!documentChangedDefaultsOnly || defaultValue != rule.InvariantScript)
                     {
                         if (rule.InvariantScript.StartsWith("RGBA("))
@@ -356,11 +368,14 @@ namespace PowerDocu.AppDocumenter
                 }
             }
             if (tableRows.Count > 0)
+            {
                 screenDoc.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
+            }
+
             tableRows = new List<MdTableRow>();
             screenDoc.Root.Add(new MdHeading("Child & Parent Controls", 3));
 
-            foreach (ControlEntity childControl in control.Children)
+            foreach (var childControl in control.Children)
             {
                 tableRows.Add(new MdTableRow("Child Control", childControl.Name));
             }
@@ -369,12 +384,14 @@ namespace PowerDocu.AppDocumenter
                 tableRows.Add(new MdTableRow("Parent Control", control.Parent.Name));
             }
             if (tableRows.Count > 0)
+            {
                 screenDoc.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
+            }
         }
 
         private string CreateChangedDefaultColourRow(string firstColumnElement, string secondColumnElement)
         {
-            StringBuilder tr = new StringBuilder("<tr>");
+            var tr = new StringBuilder("<tr>");
             tr.Append("<td style=\"width:50%; background-color:#ccffcc; color:black;\">")
                 .Append(firstColumnElement)
                 .Append("</td><td style=\"width:50%; background-color:#ffcccc; color:black;\">")
@@ -385,9 +402,9 @@ namespace PowerDocu.AppDocumenter
 
         private MdTableRow CreateColorTable(Rule rule, string defaultValue)
         {
-            StringBuilder colourTable = new StringBuilder("<table border=\"0\">");
+            var colourTable = new StringBuilder("<table border=\"0\">");
             colourTable.Append("<tr><td>").Append(rule.InvariantScript).Append("</td></tr>");
-            string colour = ColourHelper.ParseColor(rule.InvariantScript[..(rule.InvariantScript.IndexOf(')') + 1)]);
+            var colour = ColourHelper.ParseColor(rule.InvariantScript[..(rule.InvariantScript.IndexOf(')') + 1)]);
             if (!String.IsNullOrEmpty(colour))
             {
                 colourTable.Append("<tr><td style=\"background-color:").Append(colour).Append("\"></td></tr>");
@@ -395,15 +412,15 @@ namespace PowerDocu.AppDocumenter
             colourTable.Append("</table>");
             if (showDefaults && defaultValue != rule.InvariantScript && !content.appControls.controlPropertiesToSkip.Contains(rule.Property))
             {
-                StringBuilder defaultTable = new StringBuilder("<table border=\"0\">");
+                var defaultTable = new StringBuilder("<table border=\"0\">");
                 defaultTable.Append("<tr><td>").Append(defaultValue).Append("</td></tr>");
-                string defaultColour = ColourHelper.ParseColor(defaultValue);
+                var defaultColour = ColourHelper.ParseColor(defaultValue);
                 if (!String.IsNullOrEmpty(defaultColour))
                 {
                     defaultTable.Append("<tr><td style=\"background-color:").Append(defaultColour).Append("\"></td></tr>");
                 }
                 defaultTable.Append("</table>");
-                StringBuilder changesTable = new StringBuilder("<table border=\"0\">");
+                var changesTable = new StringBuilder("<table border=\"0\">");
                 changesTable.Append(CreateChangedDefaultColourRow(colourTable.ToString(), defaultTable.ToString()));
                 return new MdTableRow(rule.Property, new MdRawMarkdownSpan(changesTable.Append("</table>").ToString()));
             }
@@ -414,7 +431,7 @@ namespace PowerDocu.AppDocumenter
         {
             if (showDefaults && defaultValue != rule.InvariantScript && !content.appControls.controlPropertiesToSkip.Contains(rule.Property))
             {
-                StringBuilder table = new StringBuilder("<table border=\"0\">");
+                var table = new StringBuilder("<table border=\"0\">");
                 table.Append("<tr><td style=\"background-color:#ccffcc; width:50%;\">")
                      .Append(rule.InvariantScript)
                      .Append("<td style=\"background-color:#ffcccc; width:50%;\">").Append(defaultValue).Append("</td></tr></table>");
@@ -428,14 +445,14 @@ namespace PowerDocu.AppDocumenter
             dataSourcesDocument.Root.Add(new MdHeading(content.appDataSources.header, 2));
             dataSourcesDocument.Root.Add(new MdParagraph(new MdTextSpan(content.appDataSources.infoText)));
 
-            foreach (DataSource datasource in content.appDataSources.dataSources)
+            foreach (var datasource in content.appDataSources.dataSources)
             {
                 if (!datasource.isSampleDataSource() || documentSampleData)
                 {
                     dataSourcesDocument.Root.Add(new MdHeading(new MdLinkSpan(datasource.Name, ("datasource " + datasource.Name + " " + content.filename + ".md").Replace(" ", "-")), 3));
-                    datasourcesDocuments.TryGetValue(datasource.Name, out MdDocument dataSourceDocument);
+                    datasourcesDocuments.TryGetValue(datasource.Name, out var dataSourceDocument);
                     dataSourceDocument.Root.Add(new MdHeading(datasource.Name, 3));
-                    List<MdTableRow> tableRows = new List<MdTableRow>
+                    var tableRows = new List<MdTableRow>
                 {
                     new MdTableRow("Name", datasource.Name),
                     new MdTableRow("Type", datasource.Type)
@@ -443,7 +460,7 @@ namespace PowerDocu.AppDocumenter
                     dataSourceDocument.Root.Add(new MdTable(new MdTableRow("Property", "Value"), tableRows));
                     tableRows = new List<MdTableRow>();
                     dataSourceDocument.Root.Add(new MdHeading("DataSource Properties", 4));
-                    foreach (Expression expression in datasource.Properties.OrderBy(o => o.expressionOperator))
+                    foreach (var expression in datasource.Properties.OrderBy(o => o.expressionOperator))
                     {
                         if (expression.expressionOperator != "TableDefinition")
                         {
@@ -472,12 +489,12 @@ namespace PowerDocu.AppDocumenter
             Directory.CreateDirectory(content.folderPath + "resources");
             resourcesDocument.Root.Add(new MdHeading(content.appResources.header, 2));
             resourcesDocument.Root.Add(new MdParagraph(new MdTextSpan(content.appResources.infoText)));
-            foreach (Resource resource in content.appResources.resources)
+            foreach (var resource in content.appResources.resources)
             {
                 if (!resource.isSampleResource())
                 {
                     resourcesDocument.Root.Add(new MdHeading(resource.Name, 3));
-                    List<MdTableRow> tableRows = new List<MdTableRow>
+                    var tableRows = new List<MdTableRow>
                 {
                     new MdTableRow("Name", resource.Name),
                     new MdTableRow("Content", resource.Content),
@@ -485,14 +502,14 @@ namespace PowerDocu.AppDocumenter
                 };
                     if (resource.ResourceKind == "LocalFile")
                     {
-                        if (content.ResourceStreams.TryGetValue(resource.Name, out MemoryStream resourceStream))
+                        if (content.ResourceStreams.TryGetValue(resource.Name, out var resourceStream))
                         {
-                            Expression fileName = resource.Properties.First(o => o.expressionOperator == "FileName");
+                            var fileName = resource.Properties.First(o => o.expressionOperator == "FileName");
                             using Stream streamToWriteTo = File.Open(content.folderPath + @"resources\" + fileName.expressionOperands[0].ToString(), FileMode.Create);
 
                             resourceStream.Position = 0;
                             resourceStream.CopyTo(streamToWriteTo);
-                            int imageWidth = 400;
+                            var imageWidth = 400;
                             if (!fileName.expressionOperands[0].ToString().EndsWith("svg", StringComparison.OrdinalIgnoreCase))
                             {
                                 using var image = Image.FromStream(resourceStream, false, false);
@@ -502,7 +519,7 @@ namespace PowerDocu.AppDocumenter
                             tableRows.Add(new MdTableRow("Resource Preview", new MdImageSpan(resource.Name, "resources/" + fileName.expressionOperands[0].ToString())));
                         }
                     }
-                    foreach (Expression expression in resource.Properties.OrderBy(o => o.expressionOperator))
+                    foreach (var expression in resource.Properties.OrderBy(o => o.expressionOperator))
                     {
                         tableRows.Add(new MdTableRow(expression.expressionOperator, expression.expressionOperands?[0].ToString()));
                     }

@@ -1,10 +1,10 @@
+using Grynwald.MarkdownGenerator;
+using PowerDocu.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using PowerDocu.Common;
-using Grynwald.MarkdownGenerator;
 
 namespace PowerDocu.FlowDocumenter
 {
@@ -20,10 +20,10 @@ namespace PowerDocu.FlowDocumenter
         {
             content = contentdocumentation;
             Directory.CreateDirectory(content.folderPath);
-            mainDocumentFileName = ("index " + content.filename + ".md").Replace(" ", "-");
-            connectionsDocumentFileName = ("connections " + content.filename + ".md").Replace(" ", "-");
-            variablesDocumentFileName = ("variables " + content.filename + ".md").Replace(" ", "-");
-            triggerActionsFileName = ("triggersactions " + content.filename + ".md").Replace(" ", "-");
+            mainDocumentFileName = ("index" + ".md").Replace(" ", "-");
+            connectionsDocumentFileName = ("connections" + ".md").Replace(" ", "-");
+            variablesDocumentFileName = ("variables" + ".md").Replace(" ", "-");
+            triggerActionsFileName = ("triggersactions" + ".md").Replace(" ", " - ");
             set = new DocumentSet<MdDocument>();
             mainDocument = set.CreateMdDocument(mainDocumentFileName);
             connectionsDocument = set.CreateMdDocument(connectionsDocumentFileName);
@@ -44,7 +44,7 @@ namespace PowerDocu.FlowDocumenter
 
         private MdBulletList getNavigationLinks(bool topLevel = true)
         {
-            MdListItem[] navItems = new MdListItem[] {
+            var navItems = new MdListItem[] {
                 new MdListItem(new MdLinkSpan("Overview", topLevel ? mainDocumentFileName : "../" + mainDocumentFileName)),
                 new MdListItem(new MdLinkSpan("Connection References",topLevel ? connectionsDocumentFileName : "../" + connectionsDocumentFileName)),
                 new MdListItem(new MdLinkSpan("Variables", topLevel ? variablesDocumentFileName : "../" + variablesDocumentFileName)),
@@ -55,14 +55,14 @@ namespace PowerDocu.FlowDocumenter
 
         private void addFlowMetadata()
         {
-            List<MdTableRow> tableRows = new List<MdTableRow>();
-            foreach (KeyValuePair<string, string> kvp in content.metadata.metadataTable)
+            var tableRows = new List<MdTableRow>();
+            foreach (var kvp in content.metadata.metadataTable)
             {
                 tableRows.Add(new MdTableRow(kvp.Key, kvp.Value));
             }
             metadataTable = new MdTable(new MdTableRow(new List<string>() { "Flow Name", content.metadata.Name }), tableRows);
             // prepare the common sections for all documents
-            foreach (MdDocument doc in set.Documents)
+            foreach (var doc in set.Documents)
             {
                 doc.Root.Add(new MdHeading(content.metadata.header, 1));
                 doc.Root.Add(metadataTable);
@@ -81,25 +81,25 @@ namespace PowerDocu.FlowDocumenter
         {
             connectionsDocument.Root.Add(new MdHeading(content.connectionReferences.header, 2));
             connectionsDocument.Root.Add(new MdParagraph(new MdTextSpan(content.connectionReferences.infoText)));
-            foreach (KeyValuePair<string, Dictionary<string, string>> kvp in content.connectionReferences.connectionTable)
+            foreach (var kvp in content.connectionReferences.connectionTable)
             {
-                string connectorUniqueName = kvp.Key;
-                ConnectorIcon connectorIcon = ConnectorHelper.getConnectorIcon(connectorUniqueName);
+                var connectorUniqueName = kvp.Key;
+                var connectorIcon = ConnectorHelper.getConnectorIcon(connectorUniqueName);
                 connectionsDocument.Root.Add(new MdHeading((connectorIcon != null) ? connectorIcon.Name : connectorUniqueName, 3));
 
-                List<MdTableRow> tableRows = new List<MdTableRow>();
-                foreach (KeyValuePair<string, string> kvp2 in kvp.Value)
+                var tableRows = new List<MdTableRow>();
+                foreach (var kvp2 in kvp.Value)
                 {
                     tableRows.Add(new MdTableRow(kvp2.Key, kvp2.Value));
                 }
-                MdTable table = new MdTable(new MdTableRow(new MdTextSpan("Connector"), getConnectorNameAndIcon(connectorUniqueName, "https://docs.microsoft.com/connectors/" + connectorUniqueName)), tableRows);
+                var table = new MdTable(new MdTableRow(new MdTextSpan("Connector"), getConnectorNameAndIcon(connectorUniqueName, "https://docs.microsoft.com/connectors/" + connectorUniqueName)), tableRows);
                 connectionsDocument.Root.Add(table);
             }
         }
 
         private MdLinkSpan getConnectorNameAndIcon(string connectorUniqueName, string url, bool fromSubfolder = false)
         {
-            ConnectorIcon connectorIcon = ConnectorHelper.getConnectorIcon(connectorUniqueName);
+            var connectorIcon = ConnectorHelper.getConnectorIcon(connectorUniqueName);
             if (ConnectorHelper.getConnectorIconFile(connectorUniqueName) != "")
             {
                 return new MdLinkSpan(new MdCompositeSpan(
@@ -116,26 +116,26 @@ namespace PowerDocu.FlowDocumenter
         private void addVariablesInfo()
         {
             variablesDocument.Root.Add(new MdHeading(content.variables.header, 2));
-            foreach (KeyValuePair<string, Dictionary<string, string>> kvp in content.variables.variablesTable)
+            foreach (var kvp in content.variables.variablesTable)
             {
                 variablesDocument.Root.Add(new MdHeading(kvp.Key, 3));
 
-                List<MdTableRow> tableRows = new List<MdTableRow>();
+                var tableRows = new List<MdTableRow>();
 
-                foreach (KeyValuePair<string, string> kvp2 in kvp.Value)
+                foreach (var kvp2 in kvp.Value)
                 {
                     if (!kvp2.Key.Equals("Initial Value"))
                     {
                         tableRows.Add(new MdTableRow(kvp2.Key, kvp2.Value));
                     }
                 }
-                MdTable table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
+                var table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
                 variablesDocument.Root.Add(table);
                 if (kvp.Value.ContainsKey("Initial Value"))
                 {
                     tableRows = new List<MdTableRow>();
-                    content.variables.initialValTable.TryGetValue(kvp.Key, out Dictionary<string, string> initialValues);
-                    foreach (KeyValuePair<string, string> initialVal in initialValues)
+                    content.variables.initialValTable.TryGetValue(kvp.Key, out var initialValues);
+                    foreach (var initialVal in initialValues)
                     {
                         tableRows.Add(new MdTableRow(initialVal.Key, initialVal.Value));
                     }
@@ -145,11 +145,11 @@ namespace PowerDocu.FlowDocumenter
                         variablesDocument.Root.Add(table);
                     }
                 }
-                content.variables.referencesTable.TryGetValue(kvp.Key, out List<ActionNode> references);
+                content.variables.referencesTable.TryGetValue(kvp.Key, out var references);
                 if (references?.Count > 0)
                 {
                     tableRows = new List<MdTableRow>();
-                    foreach (ActionNode action in references.OrderBy(o => o.Name).ToList())
+                    foreach (var action in references.OrderBy(o => o.Name).ToList())
                     {
                         tableRows.Add(new MdTableRow(new MdLinkSpan(action.Name, "actions/" + getLinkFromAction(action.Name))));
                     }
@@ -161,8 +161,8 @@ namespace PowerDocu.FlowDocumenter
 
         private void addTriggerInfo()
         {
-            string triggerDocFileName = ("actions/" + content.trigger.header + "-" + content.filename + ".md").Replace(" ", "-");
-            MdDocument triggerDoc = set.CreateMdDocument(triggerDocFileName);
+            var triggerDocFileName = ("actions/" + content.trigger.header + ".md").Replace(" ", "-");
+            var triggerDoc = set.CreateMdDocument(triggerDocFileName);
             triggerDoc.Root.Add(new MdHeading(content.metadata.header, 1));
             triggerDoc.Root.Add(metadataTable);
             triggerDoc.Root.Add(getNavigationLinks(false));
@@ -170,8 +170,8 @@ namespace PowerDocu.FlowDocumenter
             triggerActionsDocument.Root.Add(new MdHeading(content.trigger.header, 2));
             triggerActionsDocument.Root.Add(new MdBulletList(new MdListItem(new MdLinkSpan(content.trigger.header, triggerDocFileName))));
 
-            List<MdTableRow> tableRows = new List<MdTableRow>();
-            foreach (KeyValuePair<string, string> kvp in content.trigger.triggerTable)
+            var tableRows = new List<MdTableRow>();
+            foreach (var kvp in content.trigger.triggerTable)
             {
                 if (kvp.Value == "mergedrow")
                 {
@@ -182,7 +182,7 @@ namespace PowerDocu.FlowDocumenter
                     tableRows.Add(new MdTableRow(kvp.Key, kvp.Value));
                 }
             }
-            MdTable table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
+            var table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
             triggerDoc.Root.Add(table);
             if (content.trigger.inputs?.Count > 0)
             {
@@ -198,22 +198,22 @@ namespace PowerDocu.FlowDocumenter
 
         private void addActionInfo()
         {
-            List<MdListItem> triggerActionsLinks = new List<MdListItem>();
-            List<ActionNode> actionNodesList = content.actions.actionNodesList;
+            var triggerActionsLinks = new List<MdListItem>();
+            var actionNodesList = content.actions.actionNodesList;
             triggerActionsDocument.Root.Add(new MdHeading(content.actions.header, 2));
             triggerActionsDocument.Root.Add(new MdParagraph(new MdTextSpan(content.actions.infoText)));
 
-            foreach (ActionNode action in actionNodesList)
+            foreach (var action in actionNodesList)
             {
-                string actionDocFileName = ("actions/" + CharsetHelper.GetSafeName(action.Name) + "-" + content.filename + ".md").Replace(" ", "-");
+                var actionDocFileName = ("actions/" + CharsetHelper.GetSafeName(action.Name) + ".md").Replace(" ", "-");
                 triggerActionsLinks.Add(new MdListItem(new MdLinkSpan(action.Name, actionDocFileName)));
-                MdDocument actionsDoc = set.CreateMdDocument(actionDocFileName);
+                var actionsDoc = set.CreateMdDocument(actionDocFileName);
                 actionsDoc.Root.Add(new MdHeading(content.metadata.header, 1));
                 actionsDoc.Root.Add(metadataTable);
                 actionsDoc.Root.Add(getNavigationLinks(false));
 
                 actionsDoc.Root.Add(new MdHeading(action.Name, 2));
-                List<MdTableRow> tableRows = new List<MdTableRow>
+                var tableRows = new List<MdTableRow>
                 {
                     new MdTableRow("Name", action.Name),
                     new MdTableRow("Type", action.Type)
@@ -231,9 +231,9 @@ namespace PowerDocu.FlowDocumenter
                 //TODO provide more details, such as information about subaction, subsequent actions, switch actions, ...
                 if (action.actionExpression != null || !String.IsNullOrEmpty(action.Expression))
                 {
-                    tableRows.Add(new MdTableRow("Expression", new MdRawMarkdownSpan((action.actionExpression != null) ? AddExpressionTable(action.actionExpression).ToString() : action.Expression)));
+                    tableRows.Add(new MdTableRow("Expression", new MdCodeSpan((action.actionExpression != null) ? AddExpressionTable(action.actionExpression).ToString() : action.Expression)));
                 }
-                MdTable table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
+                var table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
                 actionsDoc.Root.Add(table);
                 if (action.actionInputs.Count > 0 || !String.IsNullOrEmpty(action.Inputs))
                 {
@@ -241,13 +241,13 @@ namespace PowerDocu.FlowDocumenter
                     actionsDoc.Root.Add(new MdHeading("Inputs", 3));
                     if (action.actionInputs.Count > 0)
                     {
-                        foreach (Expression actionInput in action.actionInputs)
+                        foreach (var actionInput in action.actionInputs)
                         {
-                            StringBuilder operandsCell = new StringBuilder();
+                            var operandsCell = new StringBuilder();
                             if (actionInput.expressionOperands.Count > 1)
                             {
-                                StringBuilder operandsTable = new StringBuilder("<table>");
-                                foreach (object actionInputOperand in actionInput.expressionOperands)
+                                var operandsTable = new StringBuilder("<table>");
+                                foreach (var actionInputOperand in actionInput.expressionOperands)
                                 {
                                     if (actionInputOperand.GetType() == typeof(Expression))
                                     {
@@ -272,28 +272,36 @@ namespace PowerDocu.FlowDocumenter
                                     {
                                         operandsCell.Append(AddExpressionTable((Expression)actionInput.expressionOperands[0]));
                                     }
-                                    else if (actionInput.expressionOperands[0]?.GetType() == typeof(List<object>)) {
+                                    else if (actionInput.expressionOperands[0]?.GetType() == typeof(List<object>))
+                                    {
                                         operandsCell.Append("<table>");
-                                            foreach(object obj in (List<object>)actionInput.expressionOperands[0]) {
-                                                if(obj.GetType().Equals(typeof(Expression))) {
-                                                    operandsCell.Append(AddExpressionTable((Expression)obj,false));
-                                                } else  if(obj.GetType().Equals(typeof(List<object>))) {
-                                                    foreach(object o in (List<object>)obj) {
-                                                        operandsCell.Append(AddExpressionTable((Expression)o,false));
-                                                    }
-                                                }
-                                                else {
-                                                    string s = "";
+                                        foreach (var obj in (List<object>)actionInput.expressionOperands[0])
+                                        {
+                                            if (obj.GetType().Equals(typeof(Expression)))
+                                            {
+                                                operandsCell.Append(AddExpressionTable((Expression)obj, false));
+                                            }
+                                            else if (obj.GetType().Equals(typeof(List<object>)))
+                                            {
+                                                foreach (var o in (List<object>)obj)
+                                                {
+                                                    operandsCell.Append(AddExpressionTable((Expression)o, false));
                                                 }
                                             }
-                                            operandsCell.Append("</table>");
-                                    }else
+                                            else
+                                            {
+                                                var s = "";
+                                            }
+                                        }
+                                        operandsCell.Append("</table>");
+                                    }
+                                    else
                                     {
                                         operandsCell.Append(actionInput.expressionOperands[0]?.ToString());
                                     }
                                 }
                             }
-                            tableRows.Add(new MdTableRow(actionInput.expressionOperator, new MdRawMarkdownSpan(operandsCell.ToString())));
+                            tableRows.Add(new MdTableRow(actionInput.expressionOperator, new MdCodeSpan(operandsCell.ToString())));
                         }
                     }
                     if (!String.IsNullOrEmpty(action.Inputs))
@@ -312,9 +320,9 @@ namespace PowerDocu.FlowDocumenter
                         actionsDoc.Root.Add(new MdHeading(action.Type == "Switch" ? "Switch Actions" : "Subactions", 3));
                         if (action.Type == "Switch")
                         {
-                            foreach (ActionNode subaction in action.Subactions)
+                            foreach (var subaction in action.Subactions)
                             {
-                                if (action.switchRelationship.TryGetValue(subaction, out string switchValue))
+                                if (action.switchRelationship.TryGetValue(subaction, out var switchValue))
                                 {
                                     tableRows.Add(new MdTableRow(switchValue, new MdLinkSpan(subaction.Name, getLinkFromAction(subaction.Name))));
                                 }
@@ -324,7 +332,7 @@ namespace PowerDocu.FlowDocumenter
                         }
                         else
                         {
-                            foreach (ActionNode subaction in action.Subactions)
+                            foreach (var subaction in action.Subactions)
                             {
                                 //adding a link to the subaction's section in the documentation
                                 tableRows.Add(new MdTableRow(new MdLinkSpan(subaction.Name, getLinkFromAction(subaction.Name))));
@@ -337,7 +345,7 @@ namespace PowerDocu.FlowDocumenter
                     {
                         tableRows = new List<MdTableRow>();
                         actionsDoc.Root.Add(new MdHeading("Elseactions", 3));
-                        foreach (ActionNode elseaction in action.Elseactions)
+                        foreach (var elseaction in action.Elseactions)
                         {
                             //adding a link to the elseaction's section
                             tableRows.Add(new MdTableRow(new MdLinkSpan(elseaction.Name, getLinkFromAction(elseaction.Name))));
@@ -350,9 +358,9 @@ namespace PowerDocu.FlowDocumenter
                 {
                     actionsDoc.Root.Add(new MdHeading("Next Action(s) Conditions", 3));
                     tableRows = new List<MdTableRow>();
-                    foreach (ActionNode nextAction in action.Neighbours)
+                    foreach (var nextAction in action.Neighbours)
                     {
-                        string[] raConditions = action.nodeRunAfterConditions[nextAction];
+                        var raConditions = action.nodeRunAfterConditions[nextAction];
                         tableRows.Add(new MdTableRow(new MdLinkSpan(nextAction.Name + " [" + string.Join(", ", raConditions) + "]", getLinkFromAction(nextAction.Name))));
                     }
                     table = new MdTable(new MdTableRow(new List<string>() { "Next Action" }), tableRows);
@@ -371,7 +379,7 @@ namespace PowerDocu.FlowDocumenter
 
         private string getLinkFromAction(string name)
         {
-            return (CharsetHelper.GetSafeName(name) + "-" + content.filename + ".md").Replace(" ", "-");
+            return (CharsetHelper.GetSafeName(name) + ".md").Replace(" ", "-");
         }
     }
 }

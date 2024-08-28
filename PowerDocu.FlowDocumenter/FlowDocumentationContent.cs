@@ -1,7 +1,7 @@
+using PowerDocu.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using PowerDocu.Common;
 
 namespace PowerDocu.FlowDocumenter
 {
@@ -19,8 +19,8 @@ namespace PowerDocu.FlowDocumenter
         public FlowDocumentationContent(FlowEntity flow, string path, FlowActionSortOrder sortOrder = FlowActionSortOrder.SortByName)
         {
             NotificationHelper.SendNotification("Preparing documentation content for " + flow.Name);
-            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.Name + @"\");
-            filename = CharsetHelper.GetSafeName(flow.Name) + ((flow.ID != null) ? ("(" + flow.ID + ")") : "");
+            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.FileName + @"\");
+            filename = CharsetHelper.GetSafeName(flow.FileName);
             metadata = new FlowMetadata(flow);
             overview = new FlowOverview();
             connectionReferences = new FlowConnectionReferences(flow);
@@ -61,7 +61,11 @@ namespace PowerDocu.FlowDocumenter
             {
                 metadataTable.Add("Description", flow.Description);
             }
-            metadataTable.Add("Documentation generated at", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString());
+            if (!CommandLineHelper.NoTimestamp)
+            {
+                metadataTable.Add("Documentation generated at", DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString());
+            }
+
             metadataTable.Add("Number of Variables", "" + flow.actions.ActionNodes.Count(o => o.Type == "InitializeVariable"));
             metadataTable.Add("Number of Actions", "" + flow.actions.ActionNodes.Count);
         }
@@ -91,17 +95,19 @@ namespace PowerDocu.FlowDocumenter
             header = "Connections";
             infoText = $"There are a total of {flow.connectionReferences.Count} connections used in this Flow:";
             connectionTable = new Dictionary<string, Dictionary<string, string>>();
-            foreach (ConnectionReference cRef in flow.connectionReferences)
+            foreach (var cRef in flow.connectionReferences)
             {
-                string connectorUniqueName = cRef.Name;
-                Dictionary<string, string> connectionDetailsTable = new Dictionary<string, string>
+                var connectorUniqueName = cRef.Name;
+                var connectionDetailsTable = new Dictionary<string, string>
                 {
                     { "Connection Type", cRef.Type.ToString() }
                 };
                 if (cRef.Type == ConnectionType.ConnectorReference)
                 {
                     if (!String.IsNullOrEmpty(cRef.ConnectionReferenceLogicalName))
+                    {
                         connectionDetailsTable.Add("Connection Reference Name", cRef.ConnectionReferenceLogicalName);
+                    }
                 }
                 if (!String.IsNullOrEmpty(cRef.ID))
                 {
@@ -146,7 +152,7 @@ namespace PowerDocu.FlowDocumenter
             if (flow.trigger.Recurrence.Count > 0)
             {
                 triggerTable.Add("Recurrence Details", "mergedrow");
-                foreach (KeyValuePair<string, string> properties in flow.trigger.Recurrence)
+                foreach (var properties in flow.trigger.Recurrence)
                 {
                     triggerTable.Add(properties.Key, properties.Value);
                 }
@@ -173,23 +179,23 @@ namespace PowerDocu.FlowDocumenter
             variablesTable = new Dictionary<string, Dictionary<string, string>>();
             referencesTable = new Dictionary<string, List<ActionNode>>();
             initialValTable = new Dictionary<string, Dictionary<string, string>>();
-            List<ActionNode> variablesNodes = flow.actions.ActionNodes.Where(o => o.Type == "InitializeVariable").OrderBy(o => o.Name).ToList();
-            List<ActionNode> modifyVariablesNodes = flow.actions.ActionNodes.Where(o => o.Type == "SetVariable" || o.Type == "IncrementVariable").ToList();
-            foreach (ActionNode node in variablesNodes)
+            var variablesNodes = flow.actions.ActionNodes.Where(o => o.Type == "InitializeVariable").OrderBy(o => o.Name).ToList();
+            var modifyVariablesNodes = flow.actions.ActionNodes.Where(o => o.Type == "SetVariable" || o.Type == "IncrementVariable").ToList();
+            foreach (var node in variablesNodes)
             {
-                foreach (Expression exp in node.actionInputs)
+                foreach (var exp in node.actionInputs)
                 {
                     if (exp.expressionOperator == "variables")
                     {
-                        Dictionary<string, string> variableValueTable = new Dictionary<string, string>();
-                        getVariableDetails(exp.expressionOperands, variableValueTable, out string vname, out string vtype);
-                        List<ActionNode> referencedInNodes = new List<ActionNode>
+                        var variableValueTable = new Dictionary<string, string>();
+                        getVariableDetails(exp.expressionOperands, variableValueTable, out var vname, out var vtype);
+                        var referencedInNodes = new List<ActionNode>
                         {
                             node
                         };
-                        foreach (ActionNode actionNode in modifyVariablesNodes)
+                        foreach (var actionNode in modifyVariablesNodes)
                         {
-                            foreach (Expression expO in actionNode.actionInputs)
+                            foreach (var expO in actionNode.actionInputs)
                             {
                                 if (expO.expressionOperator == "name")
                                 {
@@ -200,7 +206,7 @@ namespace PowerDocu.FlowDocumenter
                                 }
                             }
                         }
-                        foreach (ActionNode actionNode in flow.actions.ActionNodes)
+                        foreach (var actionNode in flow.actions.ActionNodes)
                         {
                             if (actionNode.actionExpression?.ToString().Contains($"@variables('{vname}')") == true
                                 || actionNode.Expression?.Contains($"@variables('{vname}')") == true
@@ -210,7 +216,7 @@ namespace PowerDocu.FlowDocumenter
                             }
                             else
                             {
-                                foreach (Expression actionInput in actionNode.actionInputs)
+                                foreach (var actionInput in actionNode.actionInputs)
                                 {
                                     if (actionInput.ToString().Contains($"@variables('{vname}')"))
                                     {
@@ -220,7 +226,7 @@ namespace PowerDocu.FlowDocumenter
                             }
                         }
 
-                        Dictionary<string, string> variableDetailsTable = new Dictionary<string, string>
+                        var variableDetailsTable = new Dictionary<string, string>
                         {
                             { "Name", vname },
                             {"Type",vtype},
@@ -238,11 +244,11 @@ namespace PowerDocu.FlowDocumenter
         {
             vname = "";
             vtype = "";
-            foreach (object obj in expressionOperands)
+            foreach (var obj in expressionOperands)
             {
                 if (obj.GetType().Equals(typeof(Expression)))
                 {
-                    Expression expO = (Expression)obj;
+                    var expO = (Expression)obj;
                     if (expO.expressionOperator == "name")
                     {
                         vname = expO.expressionOperands[0].ToString();
@@ -287,8 +293,8 @@ namespace PowerDocu.FlowDocumenter
                 }
                 else if (obj.GetType().Equals(typeof(List<object>)))
                 {
-                    List<object> topList = (List<object>)obj;
-                    List<object> innerList = (List<object>)topList[0];
+                    var topList = (List<object>)obj;
+                    var innerList = (List<object>)topList[0];
                     getVariableDetails(innerList, variableValueTable, out vname, out vtype);
                 }
             }

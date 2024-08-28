@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using CommandLine;
+﻿using CommandLine;
 using PowerDocu.Common;
+using System.Collections.Generic;
 
 namespace PowerDocu.GUI
 {
@@ -26,6 +26,8 @@ namespace PowerDocu.GUI
         public bool UpdateIcons { get; set; }
         [Option('t', "wordTemplate", HelpText = "Path to a word template to use when generating a word document", Required = false)]
         public string? WordTemplate { get; set; }
+        [Option('n', "noTimestamp", HelpText = "No timestamp in generated files", Required = false)]
+        public bool NoTimestamp { get; set; }
 
         internal string FileFormat => this switch
         {

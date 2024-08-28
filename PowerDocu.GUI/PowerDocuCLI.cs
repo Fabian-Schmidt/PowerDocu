@@ -1,13 +1,13 @@
-﻿using System;
+﻿using CommandLine;
+using PowerDocu.AppDocumenter;
+using PowerDocu.Common;
+using PowerDocu.SolutionDocumenter;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using CommandLine;
-using PowerDocu.AppDocumenter;
-using PowerDocu.Common;
-using PowerDocu.SolutionDocumenter;
 
 namespace PowerDocu.GUI
 {
@@ -67,6 +67,7 @@ namespace PowerDocu.GUI
 
         private static void GenerateDocumentation(CommandLineOptions options)
         {
+            CommandLineHelper.NoTimestamp = options.NoTimestamp;
             foreach (var itemToDocument in options.ItemsToDocument!)
             {
                 if (!File.Exists(itemToDocument))
@@ -99,11 +100,15 @@ namespace PowerDocu.GUI
         {
             // Redirect output to the console on Windows
             if (hasArgs)
+            {
                 //attach to existing console
                 AttachConsole(-1);
+            }
             else
+            {
                 //create new console
                 AllocConsole();
+            }
         }
 
         private static void RedirectOutputToConsoleStream()

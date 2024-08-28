@@ -1,23 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PowerDocu.Common;
+using System;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace PowerDocu.AppDocumenter
 {
     class AppWordDocBuilder : WordDocBuilder
     {
         private readonly AppDocumentationContent content;
-        private bool DetailedDocumentation = false;
-        private bool documentChangedDefaultsOnly;
-        private bool showDefaults;
-        private bool documentSampleData;
+        private readonly bool DetailedDocumentation = false;
+        private readonly bool documentChangedDefaultsOnly;
+        private readonly bool showDefaults;
+        private readonly bool documentSampleData;
 
         public AppWordDocBuilder(AppDocumentationContent contentDocumentation, string template, bool documentChangedDefaultsOnly = false, bool showDefaults = true, bool documentSampleData = false)
         {
@@ -28,8 +27,8 @@ namespace PowerDocu.AppDocumenter
             Directory.CreateDirectory(content.folderPath);
             do
             {
-                string filename = InitializeWordDocument(content.folderPath + content.filename + (DetailedDocumentation ? " detailed" : ""), template);
-                using WordprocessingDocument wordDocument = WordprocessingDocument.Open(filename, true);
+                var filename = InitializeWordDocument(content.folderPath + content.filename + (DetailedDocumentation ? " detailed" : ""), template);
+                using var wordDocument = WordprocessingDocument.Open(filename, true);
                 mainPart = wordDocument.MainDocumentPart;
                 body = mainPart.Document.Body;
                 PrepareDocument(!String.IsNullOrEmpty(template));
@@ -38,7 +37,11 @@ namespace PowerDocu.AppDocumenter
                 addAppDataSources();
                 addAppResources();
                 addAppControlsOverview(wordDocument);
-                if (DetailedDocumentation) addDetailedAppControls();
+                if (DetailedDocumentation)
+                {
+                    addDetailedAppControls();
+                }
+
                 DetailedDocumentation = !DetailedDocumentation;
             } while (DetailedDocumentation);
             NotificationHelper.SendNotification("Created Word documentation for " + contentDocumentation.Name);
@@ -46,20 +49,20 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppProperties()
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appProperties.header));
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run()));
-            Table table = CreateTable();
+            var table = CreateTable();
             table.Append(CreateRow(new Text("App Name"), new Text(content.Name)));
             //if there is a custom logo we add it to the documentation as well. Icon based logos currently not supported
             if (!String.IsNullOrEmpty(content.appProperties.appLogo))
             {
-                if (content.ResourceStreams.TryGetValue(content.appProperties.appLogo, out MemoryStream resourceStream))
+                if (content.ResourceStreams.TryGetValue(content.appProperties.appLogo, out var resourceStream))
                 {
                     Drawing icon;
-                    ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
+                    var imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
                     int imageWidth, imageHeight;
                     using (var image = Image.FromStream(resourceStream, false, false))
                     {
@@ -68,12 +71,12 @@ namespace PowerDocu.AppDocumenter
                     }
                     resourceStream.Position = 0;
                     imagePart.FeedData(resourceStream);
-                    int usedWidth = (imageWidth > 400) ? 400 : imageWidth;
-                    icon = InsertImage(mainPart.GetIdOfPart(imagePart), usedWidth, (int)(usedWidth * imageHeight / imageWidth));
-                    TableRow tr = CreateRow(new Text("App Logo"), icon);
+                    var usedWidth = (imageWidth > 400) ? 400 : imageWidth;
+                    icon = InsertImage(mainPart.GetIdOfPart(imagePart), usedWidth, usedWidth * imageHeight / imageWidth);
+                    var tr = CreateRow(new Text("App Logo"), icon);
                     if (!String.IsNullOrEmpty(content.appProperties.appBackgroundColour))
                     {
-                        TableCell tc = (TableCell)tr.LastChild;
+                        var tc = (TableCell)tr.LastChild;
                         var shading = new Shading()
                         {
                             Color = "auto",
@@ -85,9 +88,13 @@ namespace PowerDocu.AppDocumenter
                     table.Append(tr);
                 }
             }
-            table.Append(CreateRow(new Text(content.appProperties.headerDocumentationGenerated), new Text(DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString())));
-            Table statisticsTable = CreateTable();
-            foreach (KeyValuePair<string, string> stats in content.appProperties.statisticsTable)
+            if (!CommandLineHelper.NoTimestamp)
+            {
+                table.Append(CreateRow(new Text(content.appProperties.headerDocumentationGenerated), new Text(DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToShortTimeString())));
+            }
+
+            var statisticsTable = CreateTable();
+            foreach (var stats in content.appProperties.statisticsTable)
             {
                 statisticsTable.Append(CreateRow(new Text(stats.Key), new Text(stats.Value)));
             }
@@ -100,7 +107,7 @@ namespace PowerDocu.AppDocumenter
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run()));
             table = CreateTable();
-            foreach (Expression property in content.appProperties.appProperties)
+            foreach (var property in content.appProperties.appProperties)
             {
                 if (!content.appProperties.propertiesToSkip.Contains(property.expressionOperator) && (content.appProperties.OverviewProperties.Contains(property.expressionOperator) || DetailedDocumentation))
                 {
@@ -118,7 +125,7 @@ namespace PowerDocu.AppDocumenter
                 ApplyStyleToParagraph("Heading1", para);
                 body.AppendChild(new Paragraph(new Run()));
                 table = CreateTable();
-                Expression appPreviewsFlagProperty = content.appProperties.appPreviewsFlagProperty;
+                var appPreviewsFlagProperty = content.appProperties.appPreviewsFlagProperty;
                 if (appPreviewsFlagProperty != null)
                 {
                     foreach (Expression flagProp in appPreviewsFlagProperty.expressionOperands)
@@ -133,8 +140,8 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppVariablesInfo()
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appVariablesInfo.header));
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run(new Text(content.appVariablesInfo.infoText))));
@@ -142,16 +149,16 @@ namespace PowerDocu.AppDocumenter
             run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appVariablesInfo.headerGlobalVariables));
             ApplyStyleToParagraph("Heading2", para);
-            Table table = CreateTable();
+            var table = CreateTable();
             table.Append(CreateHeaderRow(new Text("Variable Name"), new Text("Used In")));
-            foreach (string var in content.appVariablesInfo.globalVariables)
+            foreach (var var in content.appVariablesInfo.globalVariables)
             {
-                Table varReferenceTable = CreateTable();
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out List<ControlPropertyReference> references);
+                var varReferenceTable = CreateTable();
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out var references);
                 if (references != null)
                 {
                     varReferenceTable.Append(CreateHeaderRow(new Text("Control"), new Text("Property")));
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         varReferenceTable.Append(CreateRow(new Text(reference.Control.Name + " (" + reference.Control.Screen()?.Name + ")"), new Text(reference.RuleProperty)));
                     }
@@ -166,14 +173,14 @@ namespace PowerDocu.AppDocumenter
             ApplyStyleToParagraph("Heading2", para);
             table = CreateTable();
             table.Append(CreateHeaderRow(new Text("Variable Name"), new Text("Used In")));
-            foreach (string var in content.appVariablesInfo.contextVariables)
+            foreach (var var in content.appVariablesInfo.contextVariables)
             {
-                Table varReferenceTable = CreateTable();
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out List<ControlPropertyReference> references);
+                var varReferenceTable = CreateTable();
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(var, out var references);
                 if (references != null)
                 {
                     varReferenceTable.Append(CreateHeaderRow(new Text("Control"), new Text("Property")));
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         varReferenceTable.Append(CreateRow(new Text(reference.Control.Name + " (" + reference.Control.Screen()?.Name + ")"), new Text(reference.RuleProperty)));
                     }
@@ -188,14 +195,14 @@ namespace PowerDocu.AppDocumenter
             ApplyStyleToParagraph("Heading2", para);
             table = CreateTable();
             table.Append(CreateHeaderRow(new Text("Collection Name"), new Text("Used In")));
-            foreach (string coll in content.appVariablesInfo.collections)
+            foreach (var coll in content.appVariablesInfo.collections)
             {
-                Table collReferenceTable = CreateTable();
-                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(coll, out List<ControlPropertyReference> references);
+                var collReferenceTable = CreateTable();
+                content.appVariablesInfo.variableCollectionControlReferences.TryGetValue(coll, out var references);
                 if (references != null)
                 {
                     collReferenceTable.Append(CreateHeaderRow(new Text("Control"), new Text("Property")));
-                    foreach (ControlPropertyReference reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
+                    foreach (var reference in references.OrderBy(o => o.Control.Name).ThenBy(o => o.RuleProperty))
                     {
                         collReferenceTable.Append(CreateRow(new Text(reference.Control.Name), new Text(reference.RuleProperty)));
                     }
@@ -208,13 +215,13 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppControlsOverview(WordprocessingDocument wordDoc)
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appControls.headerOverview));
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run(new Text(content.appControls.infoTextScreens))));
             body.AppendChild(new Paragraph(new Run(new Text(content.appControls.infoTextControls))));
-            foreach (ControlEntity control in content.appControls.controls.Where(o => o.Type != "appinfo"))
+            foreach (var control in content.appControls.controls.Where(o => o.Type != "appinfo"))
             {
                 para = body.AppendChild(new Paragraph());
                 run = para.AppendChild(new Run());
@@ -239,9 +246,9 @@ namespace PowerDocu.AppDocumenter
             run.AppendChild(new Text(content.appControls.headerScreenNavigation));
             ApplyStyleToParagraph("Heading2", para);
             body.AppendChild(new Paragraph(new Run(new Text(content.appControls.infoTextScreenNavigation))));
-            ImagePart imagePart = wordDoc.MainDocumentPart.AddImagePart(ImagePartType.Png);
+            var imagePart = wordDoc.MainDocumentPart.AddImagePart(ImagePartType.Png);
             int imageWidth, imageHeight;
-            using (FileStream stream = new FileStream(content.folderPath + content.appControls.imageScreenNavigation + ".png", FileMode.Open))
+            using (var stream = new FileStream(content.folderPath + content.appControls.imageScreenNavigation + ".png", FileMode.Open))
             {
                 using (var image = Image.FromStream(stream, false, false))
                 {
@@ -251,8 +258,8 @@ namespace PowerDocu.AppDocumenter
                 stream.Position = 0;
                 imagePart.FeedData(stream);
             }
-            ImagePart svgPart = wordDoc.MainDocumentPart.AddNewPart<ImagePart>("image/svg+xml", "rId" + (new Random()).Next(100000, 999999));
-            using (FileStream stream = new FileStream(content.folderPath + content.appControls.imageScreenNavigation + ".svg", FileMode.Open))
+            var svgPart = wordDoc.MainDocumentPart.AddNewPart<ImagePart>("image/svg+xml", "rId" + new Random().Next(100000, 999999));
+            using (var stream = new FileStream(content.folderPath + content.appControls.imageScreenNavigation + ".svg", FileMode.Open))
             {
                 svgPart.FeedData(stream);
             }
@@ -269,7 +276,7 @@ namespace PowerDocu.AppDocumenter
 
         private Table CreateControlTable(ControlEntity control, BorderValues borderType)
         {
-            Table table = CreateTable();
+            var table = CreateTable();
             table.GetFirstChild<TableProperties>().TableBorders = new TableBorders(
                     SetDefaultTableBorderStyle(new TopBorder(), borderType),
                     SetDefaultTableBorderStyle(new LeftBorder(), borderType),
@@ -278,7 +285,7 @@ namespace PowerDocu.AppDocumenter
                     SetDefaultTableBorderStyle(new InsideHorizontalBorder(), BorderValues.None),
                     SetDefaultTableBorderStyle(new InsideVerticalBorder(), BorderValues.None)
                 );
-            string controlType = control.Type;
+            var controlType = control.Type;
             OpenXmlElement controlElement;
             if (DetailedDocumentation)
             {
@@ -293,7 +300,7 @@ namespace PowerDocu.AppDocumenter
                 controlElement = new Text(control.Name + " [" + controlType + "]");
             }
             table.Append(CreateRow(InsertSvgImage(mainPart, AppControlIcons.GetControlIcon(controlType), 32, 32), controlElement));
-            foreach (ControlEntity child in control.Children.OrderBy(o => o.Name).ToList())
+            foreach (var child in control.Children.OrderBy(o => o.Name).ToList())
             {
                 table.Append(CreateRow(new Text(""), CreateControlTable(child, BorderValues.None)));
             }
@@ -302,23 +309,23 @@ namespace PowerDocu.AppDocumenter
 
         private void addDetailedAppControls()
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appControls.headerDetails));
             ApplyStyleToParagraph("Heading1", para);
-            foreach (ControlEntity screen in content.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
+            foreach (var screen in content.appControls.controls.Where(o => o.Type == "screen").OrderBy(o => o.Name).ToList())
             {
                 para = body.AppendChild(new Paragraph());
                 run = para.AppendChild(new Run());
                 run.AppendChild(new Text(screen.Name));
-                string bookmarkID = (new Random()).Next(100000, 999999).ToString();
-                BookmarkStart start = new BookmarkStart() { Name = CreateMD5Hash(screen.Name), Id = bookmarkID };
-                BookmarkEnd end = new BookmarkEnd() { Id = bookmarkID };
+                var bookmarkID = new Random().Next(100000, 999999).ToString();
+                var start = new BookmarkStart() { Name = CreateMD5Hash(screen.Name), Id = bookmarkID };
+                var end = new BookmarkEnd() { Id = bookmarkID };
                 para.Append(start, end);
                 ApplyStyleToParagraph("Heading2", para);
                 body.AppendChild(new Paragraph(new Run()));
                 addAppControlsTable(screen);
-                foreach (ControlEntity control in content
+                foreach (var control in content
                     .appControls
                     .allControls
                     .Where(o => o.Type != "appinfo" && o.Type != "screen" && screen.Equals(o.Screen()))
@@ -329,7 +336,7 @@ namespace PowerDocu.AppDocumenter
                     para = body.AppendChild(new Paragraph());
                     run = para.AppendChild(new Run());
                     run.AppendChild(new Text(control.Name));
-                    bookmarkID = (new Random()).Next(100000, 999999).ToString();
+                    bookmarkID = new Random().Next(100000, 999999).ToString();
                     start = new BookmarkStart() { Name = CreateMD5Hash(control.Name), Id = bookmarkID };
                     end = new BookmarkEnd() { Id = bookmarkID };
                     para.Append(start, end);
@@ -343,17 +350,20 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppControlsTable(ControlEntity control)
         {
-            Entity defaultEntity = DefaultChangeHelper.GetEntityDefaults(control.Type);
-            Table table = CreateTable();
-            Table typeTable = CreateTable(BorderValues.None);
+            var defaultEntity = DefaultChangeHelper.GetEntityDefaults(control.Type);
+            var table = CreateTable();
+            var typeTable = CreateTable(BorderValues.None);
             typeTable.Append(CreateRow(InsertSvgImage(mainPart, AppControlIcons.GetControlIcon(control.Type), 16, 16), new Text(control.Type)));
             table.Append(CreateRow(new Text("Type"), typeTable));
-            string category = "";
-            foreach (Rule rule in control.Rules.OrderBy(o => o.Category).ThenBy(o => o.Property).ToList())
+            var category = "";
+            foreach (var rule in control.Rules.OrderBy(o => o.Category).ThenBy(o => o.Property).ToList())
             {
-                string defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
+                var defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
                 if (String.IsNullOrEmpty(defaultValue))
+                {
                     defaultValue = DefaultChangeHelper.DefaultValueIfUnknown;
+                }
+
                 if (!documentChangedDefaultsOnly || (defaultValue != rule.InvariantScript))
                 {
                     if (!content.ColourProperties.Contains(rule.Property))
@@ -374,15 +384,18 @@ namespace PowerDocu.AppDocumenter
                     }
                 }
             }
-            bool colourPropertiesHeaderAdded = false;
-            foreach (string property in content.ColourProperties)
+            var colourPropertiesHeaderAdded = false;
+            foreach (var property in content.ColourProperties)
             {
-                Rule rule = control.Rules.Find(o => o.Property == property);
+                var rule = control.Rules.Find(o => o.Property == property);
                 if (rule != null)
                 {
-                    string defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
+                    var defaultValue = defaultEntity?.Rules.Find(r => r.Property == rule.Property)?.InvariantScript;
                     if (String.IsNullOrEmpty(defaultValue))
+                    {
                         defaultValue = DefaultChangeHelper.DefaultValueIfUnknown;
+                    }
+
                     if (!documentChangedDefaultsOnly || defaultValue != rule.InvariantScript)
                     {
                         //we only need to add this once, and only if we add content
@@ -405,8 +418,8 @@ namespace PowerDocu.AppDocumenter
             if (control.Children.Count > 0 || control.Parent != null)
             {
                 table.Append(CreateMergedRow(new Text("Child & Parent Controls"), 2, WordDocBuilder.cellHeaderBackground));
-                Table childtable = CreateTable(BorderValues.None);
-                foreach (ControlEntity childControl in control.Children)
+                var childtable = CreateTable(BorderValues.None);
+                foreach (var childControl in control.Children)
                 {
                     childtable.Append(CreateRow(new Text(childControl.Name)));
                 }
@@ -440,10 +453,10 @@ namespace PowerDocu.AppDocumenter
 
         private TableRow CreateChangedDefaultColourRow(OpenXmlElement firstColumnElement, OpenXmlElement secondColumnElement)
         {
-            TableCellWidth fiftyPercentWidth = new TableCellWidth { Type = TableWidthUnitValues.Pct, Width = "2500" };
-            TableRow tr = CreateRow(firstColumnElement, secondColumnElement);
+            var fiftyPercentWidth = new TableCellWidth { Type = TableWidthUnitValues.Pct, Width = "2500" };
+            var tr = CreateRow(firstColumnElement, secondColumnElement);
             //update the cell with the current value
-            TableCell tc = (TableCell)tr.FirstChild;
+            var tc = (TableCell)tr.FirstChild;
             var shading = new Shading()
             {
                 Color = "auto",
@@ -467,23 +480,23 @@ namespace PowerDocu.AppDocumenter
 
         private TableRow CreateColorTable(Rule rule, string defaultValue)
         {
-            Table colorTable = CreateTable(BorderValues.None);
+            var colorTable = CreateTable(BorderValues.None);
             colorTable.Append(CreateRow(new Text(rule.InvariantScript)));
-            string colour = ColourHelper.ParseColor(rule.InvariantScript[..(rule.InvariantScript.IndexOf(')') + 1)]);
+            var colour = ColourHelper.ParseColor(rule.InvariantScript[..(rule.InvariantScript.IndexOf(')') + 1)]);
             if (!String.IsNullOrEmpty(colour))
             {
                 colorTable.Append(CreateMergedRow(new Text(""), 1, colour));
             }
             if (showDefaults && defaultValue != rule.InvariantScript && !content.appControls.controlPropertiesToSkip.Contains(rule.Property))
             {
-                Table defaultTable = CreateTable(BorderValues.None);
+                var defaultTable = CreateTable(BorderValues.None);
                 defaultTable.Append(CreateRow(new Text(defaultValue)));
-                string defaultColour = ColourHelper.ParseColor(defaultValue);
+                var defaultColour = ColourHelper.ParseColor(defaultValue);
                 if (!String.IsNullOrEmpty(defaultColour))
                 {
                     defaultTable.Append(CreateMergedRow(new Text(""), 1, defaultColour));
                 }
-                Table changesTable = CreateTable(BorderValues.None);
+                var changesTable = CreateTable(BorderValues.None);
                 changesTable.Append(CreateChangedDefaultColourRow(colorTable, defaultTable));
                 return CreateRow(new Text(rule.Property), changesTable);
             }
@@ -492,12 +505,12 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppDataSources()
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appDataSources.header));
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run(new Text(content.appDataSources.infoText))));
-            foreach (DataSource datasource in content.appDataSources.dataSources)
+            foreach (var datasource in content.appDataSources.dataSources)
             {
                 if (!datasource.isSampleDataSource() || documentSampleData)
                 {
@@ -506,13 +519,13 @@ namespace PowerDocu.AppDocumenter
                     run.AppendChild(new Text(datasource.Name));
                     ApplyStyleToParagraph("Heading2", para);
                     body.AppendChild(new Paragraph(new Run()));
-                    Table table = CreateTable();
+                    var table = CreateTable();
                     table.Append(CreateRow(new Text("Name"), new Text(datasource.Name)));
                     table.Append(CreateRow(new Text("Type"), new Text(datasource.Type)));
                     if (DetailedDocumentation)
                     {
                         table.Append(CreateMergedRow(new Text("DataSource Properties"), 2, WordDocBuilder.cellHeaderBackground));
-                        foreach (Expression expression in datasource.Properties.OrderBy(o => o.expressionOperator))
+                        foreach (var expression in datasource.Properties.OrderBy(o => o.expressionOperator))
                         {
                             AddExpressionTable(expression, table);
                         }
@@ -526,12 +539,12 @@ namespace PowerDocu.AppDocumenter
 
         private void addAppResources()
         {
-            Paragraph para = body.AppendChild(new Paragraph());
-            Run run = para.AppendChild(new Run());
+            var para = body.AppendChild(new Paragraph());
+            var run = para.AppendChild(new Run());
             run.AppendChild(new Text(content.appResources.header));
             ApplyStyleToParagraph("Heading1", para);
             body.AppendChild(new Paragraph(new Run(new Text(content.appResources.infoText))));
-            foreach (Resource resource in content.appResources.resources)
+            foreach (var resource in content.appResources.resources)
             {
                 if (!resource.isSampleResource())
                 {
@@ -540,24 +553,24 @@ namespace PowerDocu.AppDocumenter
                     run.AppendChild(new Text(resource.Name));
                     ApplyStyleToParagraph("Heading2", para);
                     body.AppendChild(new Paragraph(new Run()));
-                    Table table = CreateTable();
+                    var table = CreateTable();
                     table.Append(CreateRow(new Text("Name"), new Text(resource.Name)));
                     table.Append(CreateRow(new Text("Content"), new Text(resource.Content)));
                     table.Append(CreateRow(new Text("Resource Kind"), new Text(resource.ResourceKind)));
-                    if (resource.ResourceKind == "LocalFile" && content.ResourceStreams.TryGetValue(resource.Name, out MemoryStream resourceStream))
+                    if (resource.ResourceKind == "LocalFile" && content.ResourceStreams.TryGetValue(resource.Name, out var resourceStream))
                     {
                         try
                         {
                             Drawing icon = null;
-                            Expression fileName = resource.Properties.First(o => o.expressionOperator == "FileName");
+                            var fileName = resource.Properties.First(o => o.expressionOperator == "FileName");
                             if (fileName.expressionOperands[0].ToString().EndsWith("svg", StringComparison.OrdinalIgnoreCase))
                             {
-                                string svg = Encoding.Default.GetString(resourceStream.ToArray());
+                                var svg = Encoding.Default.GetString(resourceStream.ToArray());
                                 icon = InsertSvgImage(mainPart, svg, 400, 400);
                             }
                             else
                             {
-                                ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
+                                var imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
                                 int imageWidth, imageHeight;
                                 using (var image = Image.FromStream(resourceStream, false, false))
                                 {
@@ -566,8 +579,8 @@ namespace PowerDocu.AppDocumenter
                                 }
                                 resourceStream.Position = 0;
                                 imagePart.FeedData(resourceStream);
-                                int usedWidth = (imageWidth > 400) ? 400 : imageWidth;
-                                icon = InsertImage(mainPart.GetIdOfPart(imagePart), usedWidth, (int)(usedWidth * imageHeight / imageWidth));
+                                var usedWidth = (imageWidth > 400) ? 400 : imageWidth;
+                                icon = InsertImage(mainPart.GetIdOfPart(imagePart), usedWidth, usedWidth * imageHeight / imageWidth);
                             }
                             table.Append(CreateRow(new Text("Resource Preview"), icon));
                         }
@@ -579,7 +592,7 @@ namespace PowerDocu.AppDocumenter
                     if (DetailedDocumentation)
                     {
                         table.Append(CreateMergedRow(new Text("Resource Properties"), 2, WordDocBuilder.cellHeaderBackground));
-                        foreach (Expression expression in resource.Properties.OrderBy(o => o.expressionOperator))
+                        foreach (var expression in resource.Properties.OrderBy(o => o.expressionOperator))
                         {
                             AddExpressionTable(expression, table);
                         }

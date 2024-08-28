@@ -1,9 +1,9 @@
+using PowerDocu.Common;
+using Rubjerg.Graphviz;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using PowerDocu.Common;
-using Rubjerg.Graphviz;
 using System.Xml;
 
 namespace PowerDocu.FlowDocumenter
@@ -21,7 +21,7 @@ namespace PowerDocu.FlowDocumenter
         public GraphBuilder(FlowEntity flowToUse, string path)
         {
             flow = flowToUse;
-            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.Name + @"\");
+            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.FileName + @"\");
             Directory.CreateDirectory(folderPath);
         }
 
@@ -41,7 +41,7 @@ namespace PowerDocu.FlowDocumenter
             nodesInGraph = new List<string>();
             nodeClusterRelationship = new Dictionary<Node, SubGraph>();
             clusterRelationship = new Dictionary<SubGraph, SubGraph>();
-            RootGraph rootGraph = RootGraph.CreateNew(GraphType.Directed, CharsetHelper.GetSafeName(flow.Name));
+            var rootGraph = RootGraph.CreateNew(GraphType.Directed, CharsetHelper.GetSafeName(flow.FileName));
             Graph.IntroduceAttribute(rootGraph, "compound", "true");
             Graph.IntroduceAttribute(rootGraph, "fontname", "helvetica");
             Node.IntroduceAttribute(rootGraph, "shape", "");
@@ -51,15 +51,15 @@ namespace PowerDocu.FlowDocumenter
             Node.IntroduceAttribute(rootGraph, "label", "");
             Node.IntroduceAttribute(rootGraph, "fontname", "helvetica");
             Edge.IntroduceAttribute(rootGraph, "label", "");
-            List<ActionNode> rootActions = flow.actions.getRootNodes();
+            var rootActions = flow.actions.getRootNodes();
 
-            Node trigger = rootGraph.GetOrAddNode(CharsetHelper.GetSafeName(flow.trigger.Name));
+            var trigger = rootGraph.GetOrAddNode(CharsetHelper.GetSafeName(flow.trigger.Name));
             trigger.SetAttribute("color", GraphColours.GetColourForAction("Trigger"));
             trigger.SetAttribute("fillcolor", GraphColours.GetFillColourForAction("Trigger"));
             trigger.SetAttribute("style", "filled");
             if (!String.IsNullOrEmpty(flow.trigger.Description))
             {
-                string html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(flow.trigger.Name) + "</td></tr>";
+                var html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(flow.trigger.Name) + "</td></tr>";
                 html += "<tr><td><FONT POINT-SIZE=\"10\">(" + generateMultiLineText(System.Web.HttpUtility.HtmlEncode(flow.trigger.Description)) + ")</FONT></td></tr></table>";
                 trigger.SetAttributeHtml("label", html);
             }
@@ -69,14 +69,14 @@ namespace PowerDocu.FlowDocumenter
             }
             if (!String.IsNullOrEmpty(flow.trigger.Connector))
             {
-                string connectorIcon = ConnectorHelper.getConnectorIconFile(flow.trigger.Connector);
+                var connectorIcon = ConnectorHelper.getConnectorIconFile(flow.trigger.Connector);
 
                 if (!String.IsNullOrEmpty(connectorIcon))
                 {
-                    string connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
+                    var connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
                     ImageHelper.ConvertImageTo32(connectorIcon, connectorIcon32Path);
                     //path to image is absolute here, as GraphViz wasn't able to render it properly if relative. Will be replaced in the SVG just before the PNG gets generated
-                    string html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(flow.trigger.Name) + "</td></tr>";
+                    var html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(flow.trigger.Name) + "</td></tr>";
                     if (!String.IsNullOrEmpty(flow.trigger.Description))
                     {
                         html += "<tr><td></td><td><FONT POINT-SIZE=\"10\">" + generateMultiLineText(System.Web.HttpUtility.HtmlEncode(flow.trigger.Description)) + "</FONT></td></tr>";
@@ -85,7 +85,7 @@ namespace PowerDocu.FlowDocumenter
                     trigger.SetAttributeHtml("label", html);
                 }
             }
-            foreach (ActionNode rootAction in rootActions)
+            foreach (var rootAction in rootActions)
             {
                 addNodesToGraph(rootGraph, rootAction, null, null, showSubactions, true);
                 nodesInGraph = new List<string>();
@@ -98,17 +98,17 @@ namespace PowerDocu.FlowDocumenter
         private string generateImageFiles(RootGraph rootGraph, bool showSubactions)
         {
             //Generate image files
-            string filename = "flow" + (showSubactions ? "-detailed" : "");
+            var filename = "flow" + (showSubactions ? "-detailed" : "");
             rootGraph.ToPngFile(folderPath + filename + ".png");
             rootGraph.ToSvgFile(folderPath + filename + ".svg");
 
             //updating the SVG, embedding any images as base64 content so that they are shown in the Word output
-            XmlDocument xmlDoc = new XmlDocument
+            var xmlDoc = new XmlDocument
             {
                 XmlResolver = null
             };
             xmlDoc.Load(folderPath + filename + ".svg");
-            XmlNodeList elemList = xmlDoc.GetElementsByTagName("image");
+            var elemList = xmlDoc.GetElementsByTagName("image");
             foreach (XmlNode xn in elemList)
             {
                 xn.Attributes["xlink:href"].Value = "data:image/png;base64," + ImageHelper.GetBase64(xn.Attributes["xlink:href"].Value);
@@ -146,7 +146,7 @@ namespace PowerDocu.FlowDocumenter
                 SubGraph yesCluster = null;
                 SubGraph noCluster = null;
                 //adding the current item as a new node
-                Node currentNode = rootGraph.GetOrAddNode(CharsetHelper.GetSafeName(node.Name));
+                var currentNode = rootGraph.GetOrAddNode(CharsetHelper.GetSafeName(node.Name));
                 currentNode.SetAttribute("shape", "box");
                 currentNode.SetAttribute("margin", "0");
                 currentNode.SetAttribute("color", GraphColours.GetColourForAction(node.Type));
@@ -155,13 +155,13 @@ namespace PowerDocu.FlowDocumenter
                 //setting the label here again with the name is required to make the connector icon code below work properly
                 if (!String.IsNullOrEmpty(node.Description))
                 {
-                    string html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
+                    var html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
                     html += "<tr><td><font point-size=\"10\">" + generateMultiLineText(System.Web.HttpUtility.HtmlEncode(node.Description)) + "</font></td></tr></table>";
                     currentNode.SetAttributeHtml("label", html);
                 }
                 else if (node.Type == "Switch")
                 {
-                    string html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
+                    var html = "<table border=\"0\"><tr><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
                     html += "<tr><td><FONT POINT-SIZE=\"10\">(" + generateMultiLineText(System.Web.HttpUtility.HtmlEncode(node.Expression)) + ")</FONT></td></tr></table>";
                     currentNode.SetAttributeHtml("label", html);
                 }
@@ -171,14 +171,14 @@ namespace PowerDocu.FlowDocumenter
                 }
                 if (!String.IsNullOrEmpty(node.Connection))
                 {
-                    string connectorIcon = ConnectorHelper.getConnectorIconFile(node.Connection);
+                    var connectorIcon = ConnectorHelper.getConnectorIconFile(node.Connection);
 
                     if (!String.IsNullOrEmpty(connectorIcon))
                     {
-                        string connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
+                        var connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
                         ImageHelper.ConvertImageTo32(connectorIcon, connectorIcon32Path);
                         //path to image is absolute here, as GraphViz wasn't able to render it properly if relative. Will be replaced in the SVG just before the PNG gets generated
-                        string html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
+                        var html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
                         if (!String.IsNullOrEmpty(node.Description))
                         {
                             html += "<tr><td></td><td><font point-size=\"10\">" + generateMultiLineText(System.Web.HttpUtility.HtmlEncode(node.Description)) + "</font></td></tr>";
@@ -199,7 +199,9 @@ namespace PowerDocu.FlowDocumenter
                     {
                         cluster = currentCluster.GetOrAddSubgraph("cluster_" + CharsetHelper.GetSafeName(node.Name));
                         if (!clusterRelationship.ContainsKey(cluster))
+                        {
                             clusterRelationship.Add(cluster, currentCluster);
+                        }
                     }
                     else
                     {
@@ -213,7 +215,9 @@ namespace PowerDocu.FlowDocumenter
                             //create the new cluster inside the parent cluster
                             cluster = parentCluster.GetOrAddSubgraph("cluster_" + CharsetHelper.GetSafeName(node.Name));
                             if (!clusterRelationship.ContainsKey(cluster))
+                            {
                                 clusterRelationship.Add(cluster, parentCluster);
+                            }
                         }
                     }
                     cluster.SafeSetAttribute("style", "filled", "");
@@ -221,18 +225,23 @@ namespace PowerDocu.FlowDocumenter
                     cluster.SafeSetAttribute("color", GraphColours.GetColourForAction("Cluster"), "");
                     cluster.AddExisting(currentNode);
                     if (!nodeClusterRelationship.ContainsKey(currentNode))
+                    {
                         nodeClusterRelationship.Add(currentNode, cluster);
+                    }
 
                     if (showSubactions)
                     {
-                        foreach (ActionNode subaction in node.Subactions)
+                        foreach (var subaction in node.Subactions)
                         {
                             //connect the subactions to the current node inside the cluster
                             if (node.Elseactions.Count > 0)
                             {
                                 yesCluster = cluster.GetOrAddSubgraph("cluster_yes" + CharsetHelper.GetSafeName(node.Name));
                                 if (!clusterRelationship.ContainsKey(yesCluster))
+                                {
                                     clusterRelationship.Add(yesCluster, cluster);
+                                }
+
                                 yesCluster.SafeSetAttribute("style", "filled", "");
                                 yesCluster.SafeSetAttribute("fillcolor", GraphColours.GetFillColourForAction("YesCluster"), "");
                                 yesCluster.SafeSetAttribute("color", GraphColours.GetColourForAction("YesCluster"), "");
@@ -256,12 +265,15 @@ namespace PowerDocu.FlowDocumenter
                                 addNodesToGraph(rootGraph, subaction, null, cluster, showSubactions, false);
                             }
                         }
-                        foreach (ActionNode subaction in node.Elseactions)
+                        foreach (var subaction in node.Elseactions)
                         {
                             //connect the subactions to the current node inside the cluster                         
                             noCluster = cluster.GetOrAddSubgraph("cluster_no" + CharsetHelper.GetSafeName(node.Name));
                             if (!clusterRelationship.ContainsKey(noCluster))
+                            {
                                 clusterRelationship.Add(noCluster, cluster);
+                            }
+
                             noCluster.SafeSetAttribute("style", "filled", "");
                             noCluster.SafeSetAttribute("fillcolor", GraphColours.GetFillColourForAction("NoCluster"), "");
                             noCluster.SafeSetAttribute("color", GraphColours.GetColourForAction("NoCluster"), "");
@@ -273,10 +285,12 @@ namespace PowerDocu.FlowDocumenter
                 {
                     currentCluster.AddExisting(currentNode);
                     if (!nodeClusterRelationship.ContainsKey(currentNode))
+                    {
                         nodeClusterRelationship.Add(currentNode, currentCluster);
+                    }
                 }
 
-                foreach (ActionNode neighbour in node.Neighbours)
+                foreach (var neighbour in node.Neighbours)
                 {
                     addNodesToGraph(rootGraph, neighbour, isTopLevel ? null : cluster, currentCluster, showSubactions, isTopLevel);
                 }
@@ -293,7 +307,7 @@ namespace PowerDocu.FlowDocumenter
                 SubGraph yesCluster = null;
                 SubGraph noCluster = null;
                 string edgeName;
-                Node currentNode = rootGraph.GetNode(CharsetHelper.GetSafeName(node.Name));
+                var currentNode = rootGraph.GetNode(CharsetHelper.GetSafeName(node.Name));
                 if (node.Subactions.Count + node.Elseactions.Count > 0)
                 {
                     if (currentCluster != null)
@@ -313,7 +327,7 @@ namespace PowerDocu.FlowDocumenter
                     }
                     if (showSubactions)
                     {
-                        foreach (ActionNode subaction in node.Subactions)
+                        foreach (var subaction in node.Subactions)
                         {
                             //connect the subactions to the current node inside the cluster
                             if (node.Elseactions.Count > 0)
@@ -326,7 +340,7 @@ namespace PowerDocu.FlowDocumenter
                                 addEdgesToGraph(rootGraph, subaction, currentNode, null, cluster, showSubactions, false);
                             }
                         }
-                        foreach (ActionNode subaction in node.Elseactions)
+                        foreach (var subaction in node.Elseactions)
                         {
                             noCluster = cluster.GetSubgraph("cluster_no" + CharsetHelper.GetSafeName(node.Name));
                             addEdgesToGraph(rootGraph, subaction, currentNode, parentCluster, noCluster, showSubactions, false);
@@ -337,11 +351,11 @@ namespace PowerDocu.FlowDocumenter
                 //start connecting the nodes
                 edgeName = "Edge " + previousNeighbourNode.GetName() + "-" + currentNode.GetName();
                 //get the preceding neighbours 
-                List<ActionNode> precedingNeighbours = flow.actions.getPrecedingNeighbours(node);
+                var precedingNeighbours = flow.actions.getPrecedingNeighbours(node);
                 //Only connect if there is no preceding node (meaning it's the first node in the current level) or if the 'parent' is the previous node), and if there's no existing edge (to avoid duplicates)
                 if ((precedingNeighbours.Count == 0 || (precedingNeighbours.Count == 1 && precedingNeighbours.Find(o => o.Name.Equals(previousNeighbourNode.GetName())) != null)) && !edges.Contains(edgeName))
                 {
-                    ActionNode precedingNeighbour = precedingNeighbours.Count > 0 ? precedingNeighbours.Find(o => o.Name.Equals(previousNeighbourNode.GetName())) : null;
+                    var precedingNeighbour = precedingNeighbours.Count > 0 ? precedingNeighbours.Find(o => o.Name.Equals(previousNeighbourNode.GetName())) : null;
                     string edgeLabel = null;
                     if (node.parent?.Type.Equals("Switch") == true && node.parent.Name.Equals(previousNeighbourNode.GetName()))
                     {
@@ -351,17 +365,17 @@ namespace PowerDocu.FlowDocumenter
                 }
                 else if (precedingNeighbours.Count > 0 && !edges.Contains(edgeName))
                 {
-                    foreach (ActionNode precedingNeighbour in precedingNeighbours)
+                    foreach (var precedingNeighbour in precedingNeighbours)
                     {
                         edgeName = "Edge " + precedingNeighbour.Name + "-" + currentNode.GetName();
-                        Node precNode = rootGraph.GetNode(CharsetHelper.GetSafeName(precedingNeighbour.Name));
+                        var precNode = rootGraph.GetNode(CharsetHelper.GetSafeName(precedingNeighbour.Name));
                         if (precNode != null)
                         {
                             CreateEdge(currentNode, precNode, node, precedingNeighbour, edgeName, rootGraph);
                         }
                     }
                 }
-                foreach (ActionNode neighbour in node.Neighbours)
+                foreach (var neighbour in node.Neighbours)
                 {
                     addEdgesToGraph(rootGraph, neighbour, currentNode, isTopLevel ? null : cluster, currentCluster, showSubactions, isTopLevel);
                 }
@@ -371,16 +385,16 @@ namespace PowerDocu.FlowDocumenter
         private void CreateEdge(Node currentNode, Node previousNeighbourNode, ActionNode currentActionNode, ActionNode precedingNeighbour, string edgeName, RootGraph rootGraph, string edgeLabel = null)
         {
             Edge edgeAB = null;
-            SubGraph prevCluster = (nodeClusterRelationship.ContainsKey(previousNeighbourNode)) ? nodeClusterRelationship[previousNeighbourNode] : null;
-            SubGraph curCluster = (nodeClusterRelationship.ContainsKey(currentNode)) ? nodeClusterRelationship[currentNode] : null;
+            var prevCluster = nodeClusterRelationship.ContainsKey(previousNeighbourNode) ? nodeClusterRelationship[previousNeighbourNode] : null;
+            var curCluster = nodeClusterRelationship.ContainsKey(currentNode) ? nodeClusterRelationship[currentNode] : null;
             if (prevCluster != null)
             {
                 if (curCluster != null)
                 {
                     if (prevCluster != curCluster)
                     {
-                        SubGraph curClusterParent = (clusterRelationship.ContainsKey(curCluster)) ? clusterRelationship[curCluster] : null;
-                        SubGraph prevClusterParent = (clusterRelationship.ContainsKey(prevCluster)) ? clusterRelationship[prevCluster] : null;
+                        var curClusterParent = clusterRelationship.ContainsKey(curCluster) ? clusterRelationship[curCluster] : null;
+                        var prevClusterParent = clusterRelationship.ContainsKey(prevCluster) ? clusterRelationship[prevCluster] : null;
                         //connect a node inside a cluster with a subsequent cluster
                         if (curClusterParent == prevCluster)
                         {
@@ -393,7 +407,7 @@ namespace PowerDocu.FlowDocumenter
                             if (curClusterParent == null || previousNeighbourNode.GetName().Equals(precedingNeighbour?.Name) || curCluster == prevClusterParent)
                             {
                                 //adding an invisible node at the bottom of the previous cluster
-                                Node invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + ((prevClusterParent == curCluster) ? currentNode : curCluster));
+                                var invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + ((prevClusterParent == curCluster) ? currentNode : curCluster));
                                 invisNode.SafeSetAttribute("style", "invis", "");
                                 invisNode.SafeSetAttribute("margin", "0", "");
                                 invisNode.SafeSetAttribute("width", "0", "");
@@ -406,9 +420,9 @@ namespace PowerDocu.FlowDocumenter
                                 }
                                 edgeAB.SetLogicalTail(prevCluster);
                                 //invisible node is at the bottom during the layout process because we connect all other "end nodes" in the preCluster, that is nodes that do not have any neighbour nodes, with it
-                                foreach (Node clusterNode in prevCluster.Nodes())
+                                foreach (var clusterNode in prevCluster.Nodes())
                                 {
-                                    ActionNode clusterActionNode = flow.actions.Find(clusterNode.GetName());
+                                    var clusterActionNode = flow.actions.Find(clusterNode.GetName());
                                     if (clusterActionNode?.Neighbours.Count + clusterActionNode?.Subactions.Count + clusterActionNode?.Elseactions.Count == 0)
                                     {
                                         //creating an invisible edge only if there are no other subsequent nodes (neighbors or subnodes)
@@ -422,9 +436,15 @@ namespace PowerDocu.FlowDocumenter
                                 SubGraph prevClusterParentParent = null;
                                 SubGraph curClusterParentParent = null;
                                 if (curClusterParent != null)
+                                {
                                     clusterRelationship.TryGetValue(curClusterParent, out curClusterParentParent);
+                                }
+
                                 if (prevClusterParent != null)
+                                {
                                     clusterRelationship.TryGetValue(prevClusterParent, out prevClusterParentParent);
+                                }
+
                                 if (curClusterParentParent != prevClusterParentParent)
                                 {
                                     while (curClusterParentParent != prevCluster)
@@ -440,7 +460,7 @@ namespace PowerDocu.FlowDocumenter
                                     //edgeAB = rootGraph.GetOrAddEdge(previousNeighbourNode, currentNode, edgeName);
                                     //edgeAB.SetLogicalHead(curClusterParent);
                                     //adding an invisible node at the bottom of the previous cluster
-                                    Node invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + ((prevClusterParent == curCluster) ? currentNode : curCluster));
+                                    var invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + ((prevClusterParent == curCluster) ? currentNode : curCluster));
                                     invisNode.SafeSetAttribute("style", "invis", "");
                                     invisNode.SafeSetAttribute("margin", "0", "");
                                     invisNode.SafeSetAttribute("width", "0", "");
@@ -453,9 +473,9 @@ namespace PowerDocu.FlowDocumenter
                                     }
                                     edgeAB.SetLogicalTail(prevCluster);
                                     //invisible node is at the bottom during the layout process because we connect all other "end nodes" in the preCluster, that is nodes that do not have any neighbour nodes, with it
-                                    foreach (Node clusterNode in prevCluster.Nodes())
+                                    foreach (var clusterNode in prevCluster.Nodes())
                                     {
-                                        ActionNode clusterActionNode = flow.actions.Find(clusterNode.GetName());
+                                        var clusterActionNode = flow.actions.Find(clusterNode.GetName());
                                         if (clusterActionNode?.Neighbours.Count + clusterActionNode?.Subactions.Count + clusterActionNode?.Elseactions.Count == 0)
                                         {
                                             //creating an invisible edge only if there are no other subsequent nodes (neighbors or subnodes)
@@ -476,7 +496,7 @@ namespace PowerDocu.FlowDocumenter
                 else
                 {
                     //adding an invisible node at the bottom of the cluster
-                    Node invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + currentNode);
+                    var invisNode = prevCluster.GetOrAddNode("invisnode" + prevCluster + currentNode);
                     invisNode.SafeSetAttribute("style", "invis", "");
                     invisNode.SafeSetAttribute("margin", "0", "");
                     invisNode.SafeSetAttribute("width", "0", "");
@@ -485,9 +505,9 @@ namespace PowerDocu.FlowDocumenter
                     edgeAB = rootGraph.GetOrAddEdge(invisNode, currentNode, edgeName);
                     edgeAB.SetLogicalTail(prevCluster);
                     //invisible node is at the bottom because we connect all other "end nodes" in the preCluster, that is nodes that do not have any neighbour nodes, with it
-                    foreach (Node clusterNode in prevCluster.Nodes())
+                    foreach (var clusterNode in prevCluster.Nodes())
                     {
-                        ActionNode clusterActionNode = flow.actions.Find(clusterNode.GetName());
+                        var clusterActionNode = flow.actions.Find(clusterNode.GetName());
                         if (clusterActionNode?.Neighbours.Count + clusterActionNode?.Subactions.Count + clusterActionNode?.Elseactions.Count == 0)
                         {
                             //creating an invisible edge only if there are no other subsequent nodes (neighbors or subnodes)
@@ -514,7 +534,7 @@ namespace PowerDocu.FlowDocumenter
             //additional formatting for the edge in case the "run after" property of the action does not include "Succeeded"
             if (precedingNeighbour?.nodeRunAfterConditions?.ContainsKey(currentActionNode) == true)
             {
-                precedingNeighbour.nodeRunAfterConditions.TryGetValue(currentActionNode, out string[] runAfterConditions);
+                precedingNeighbour.nodeRunAfterConditions.TryGetValue(currentActionNode, out var runAfterConditions);
                 if (!runAfterConditions.Contains("Succeeded"))
                 {
                     edgeAB.SafeSetAttribute("style", "dotted", "");
@@ -531,9 +551,9 @@ namespace PowerDocu.FlowDocumenter
         //splits a text into multiple lines (<br/> for line breaks), with each line having a maximum of 65 characters
         private string generateMultiLineText(string text)
         {
-            string[] words = text.Split(' ');
-            string multiLineText = "";
-            int lineLength = 0;
+            var words = text.Split(' ');
+            var multiLineText = "";
+            var lineLength = 0;
             for (var counter = 0; counter < words.Length; counter++)
             {
                 lineLength += words[counter].Length + 1;
@@ -603,7 +623,7 @@ namespace PowerDocu.FlowDocumenter
 
         public static string GetFillColourForAction(string actionType)
         {
-            string colour = actionType switch
+            var colour = actionType switch
             {
                 "Trigger" or "Expression" => TriggerFillColour,
                 "Compose" or "ParseJson" or "Select" or "Switch" or "Table" => DataOperationFillColour,
