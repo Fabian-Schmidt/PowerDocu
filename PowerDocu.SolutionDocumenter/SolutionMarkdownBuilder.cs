@@ -12,7 +12,8 @@ namespace PowerDocu.SolutionDocumenter
         private readonly SolutionDocumentationContent content;
         private readonly string solutionDocumentFileName;
         private readonly MdDocument solutionDoc;
-        private readonly Dictionary<string, MdDocument> tablesDocs = new();
+        private readonly Dictionary<string, (string path, MdDocument doc)> tablesDocs = new();
+        private readonly Dictionary<string, (string path, MdDocument doc)> securityRolesDocs = new();
 
         public SolutionMarkdownBuilder(SolutionDocumentationContent contentDocumentation)
         {
@@ -331,9 +332,13 @@ namespace PowerDocu.SolutionDocumenter
         private void renderSecurityRoles()
         {
             solutionDoc.Root.Add(new MdHeading("Security Roles", 3));
+            var navItems = new List<MdListItem>();
             foreach (var role in content.solution.Customizations.getRoles())
             {
-                solutionDoc.Root.Add(new MdHeading(role.Name + " (" + role.ID + ")", 4));
+                var securityRoleDoc = new MdDocument();
+                var securityRoleDocFileName = CharsetHelper.GetSafeName("securityRole_" + role.ID + ".md").Replace(" ", "-");
+
+                securityRoleDoc.Root.Add(new MdHeading(role.Name + " (" + role.ID + ")", 4));
                 var componentTableRows = new List<MdTableRow>();
                 foreach (var tableAccess in role.Tables.OrderBy(o => o.Name))
                 {
@@ -349,17 +354,56 @@ namespace PowerDocu.SolutionDocumenter
                     );
                     componentTableRows.Add(row);
                 }
-                solutionDoc.Root.Add(new MdTable(new MdTableRow("Table", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
+                securityRoleDoc.Root.Add(new MdTable(new MdTableRow("Table", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
 
                 if (role.miscellaneousPrivileges.Count > 0)
                 {
-                    solutionDoc.Root.Add(new MdParagraph(new MdTextSpan("Miscellaneous Privileges associated with this role:")));
+                    securityRoleDoc.Root.Add(new MdParagraph(new MdTextSpan("Miscellaneous Privileges associated with this role:")));
                     var miscPrivTableRows = new List<MdTableRow>();
                     foreach (var miscPrivilege in role.miscellaneousPrivileges)
                     {
                         miscPrivTableRows.Add(new MdTableRow(miscPrivilege.Key, getAccessLevelIcon(miscPrivilege.Value)));
                     }
-                    solutionDoc.Root.Add(new MdTable(new MdTableRow("Miscellaneous Privilege", "Level"), miscPrivTableRows));
+                    securityRoleDoc.Root.Add(new MdTable(new MdTableRow("Miscellaneous Privilege", "Level"), miscPrivTableRows));
+                }
+
+                securityRoleDoc.Save(content.folderPath + "/" + securityRoleDocFileName);
+                securityRolesDocs[role.Name] = (content.folderPath + "/" + securityRoleDocFileName, securityRoleDoc);
+                navItems.Add(new MdListItem(new MdLinkSpan(role.Name, securityRoleDocFileName)));
+
+
+            }
+            solutionDoc.Root.Add(new MdBulletList(navItems));
+
+            var securityRolesByTableName = content.solution.Customizations.getRoles()
+                .SelectMany(role => role.Tables.Select(tableAccess => new { role, tableAccess }))
+                .GroupBy(key => key.tableAccess.Name);
+
+            foreach (var securityRoleByTableName in securityRolesByTableName)
+            {
+                if (tablesDocs.ContainsKey(securityRoleByTableName.Key))
+                {
+                    var (tablePath, tableDoc) = tablesDocs[securityRoleByTableName.Key];
+
+                    tableDoc.Root.Add(new MdHeading("Security Roles", 5));
+                    var componentTableRows = new List<MdTableRow>();
+                    foreach (var group in securityRoleByTableName.OrderBy(group => group.role.Name))
+                    {
+                        var row = new MdTableRow(group.role.Name,
+                                               getAccessLevelIcon(group.tableAccess.Create),
+                                               getAccessLevelIcon(group.tableAccess.Read),
+                                               getAccessLevelIcon(group.tableAccess.Write),
+                                               getAccessLevelIcon(group.tableAccess.Delete),
+                                               getAccessLevelIcon(group.tableAccess.Append),
+                                               getAccessLevelIcon(group.tableAccess.AppendTo),
+                                               getAccessLevelIcon(group.tableAccess.Assign),
+                                               getAccessLevelIcon(group.tableAccess.Share)
+                        );
+                        componentTableRows.Add(row);
+                    }
+                    tableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
+
+                    tableDoc.Save(tablePath);
                 }
             }
         }
@@ -373,7 +417,6 @@ namespace PowerDocu.SolutionDocumenter
             {
                 var tableDoc = new MdDocument();
                 var tableDocFileName = CharsetHelper.GetSafeName(tableEntity.getName()) + ".md";
-                tablesDocs[tableEntity.getName()] = tableDoc;
 
                 tableDoc.Root.Add(new MdHeading(tableEntity.getLocalizedName() + " (" + tableEntity.getName() + ")", 4));
                 var tableRows = new List<MdTableRow>
@@ -401,6 +444,7 @@ namespace PowerDocu.SolutionDocumenter
                 }
 
                 tableDoc.Save(content.folderPath + "/" + tableDocFileName);
+                tablesDocs[tableEntity.getName()] = (content.folderPath + "/" + tableDocFileName, tableDoc);
                 navItems.Add(new MdListItem(new MdLinkSpan(tableEntity.getName(), tableDocFileName)));
             }
             solutionDoc.Root.Add(new MdBulletList(navItems));
