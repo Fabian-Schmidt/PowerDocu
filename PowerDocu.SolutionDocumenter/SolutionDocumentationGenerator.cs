@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using PowerDocu.Common;
 using PowerDocu.AppDocumenter;
+using PowerDocu.Common;
 using PowerDocu.FlowDocumenter;
+using System;
+using System.IO;
 
 namespace PowerDocu.SolutionDocumenter
 {
@@ -13,15 +12,15 @@ namespace PowerDocu.SolutionDocumenter
         {
             if (File.Exists(filePath))
             {
-                DateTime startDocGeneration = DateTime.Now;
-                List<FlowEntity> flows = FlowDocumentationGenerator.GenerateDocumentation(
+                var startDocGeneration = DateTime.Now;
+                var flows = FlowDocumentationGenerator.GenerateDocumentation(
                     filePath,
                     fileFormat,
                     flowActionSortOrder,
                     wordTemplate,
                     outputPath
                 );
-                List<AppEntity> apps = AppDocumentationGenerator.GenerateDocumentation(
+                var apps = AppDocumentationGenerator.GenerateDocumentation(
                     filePath,
                     fileFormat,
                     documentDefaultChangesOnly,
@@ -30,32 +29,36 @@ namespace PowerDocu.SolutionDocumenter
                     wordTemplate,
                     outputPath
                 );
-                SolutionParser solutionParser = new SolutionParser(filePath);
+                var solutionParser = new SolutionParser(filePath);
                 if (solutionParser.solution != null)
                 {
-                    string path = outputPath == null ? 
-                        Path.GetDirectoryName(filePath) + @"\Solution " + CharsetHelper.GetSafeName(Path.GetFileNameWithoutExtension(filePath) + @"\") : 
-                        outputPath + @"\" + CharsetHelper.GetSafeName(Path.GetFileNameWithoutExtension(filePath) + @"\");
+                    var path = outputPath == null ?
+                        Path.Combine(Path.GetDirectoryName(filePath), "Solution " + CharsetHelper.GetSafeName(Path.GetFileNameWithoutExtension(filePath))) :
+                        Path.Combine(outputPath, CharsetHelper.GetSafeName(Path.GetFileNameWithoutExtension(filePath)));
 
-                    SolutionDocumentationContent solutionContent = new SolutionDocumentationContent(solutionParser.solution, apps, flows, path);
+#if DEBUG
+                    path = outputPath;
+#endif
+
+                    var solutionContent = new SolutionDocumentationContent(solutionParser.solution, apps, flows, path);
                     if (fileFormat.Equals(OutputFormatHelper.Word) || fileFormat.Equals(OutputFormatHelper.All))
                     {
                         //create the Word document
                         NotificationHelper.SendNotification("Creating Solution documentation");
                         if (String.IsNullOrEmpty(wordTemplate) || !File.Exists(wordTemplate))
                         {
-                            SolutionWordDocBuilder wordzip = new SolutionWordDocBuilder(solutionContent, null);
+                            var wordzip = new SolutionWordDocBuilder(solutionContent, null);
                         }
                         else
                         {
-                            SolutionWordDocBuilder wordzip = new SolutionWordDocBuilder(solutionContent, wordTemplate);
+                            var wordzip = new SolutionWordDocBuilder(solutionContent, wordTemplate);
                         }
                     }
                     if (fileFormat.Equals(OutputFormatHelper.Markdown) || fileFormat.Equals(OutputFormatHelper.All))
                     {
-                        SolutionMarkdownBuilder mdDoc = new SolutionMarkdownBuilder(solutionContent);
+                        var mdDoc = new SolutionMarkdownBuilder(solutionContent);
                     }
-                    DateTime endDocGeneration = DateTime.Now;
+                    var endDocGeneration = DateTime.Now;
                     NotificationHelper.SendNotification("SolutionDocumenter: Created documentation for " + filePath + ". Total solution documentation completed in " + (endDocGeneration - startDocGeneration).TotalSeconds + " seconds.");
                 }
             }

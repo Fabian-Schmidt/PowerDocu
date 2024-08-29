@@ -12,8 +12,8 @@ namespace PowerDocu.SolutionDocumenter
         private readonly SolutionDocumentationContent content;
         private readonly string solutionDocumentFileName;
         private readonly MdDocument solutionDoc;
-        private readonly Dictionary<string, (string path, MdDocument doc)> tablesDocs = new();
-        private readonly Dictionary<string, (string path, MdDocument doc)> securityRolesDocs = new();
+        private readonly Dictionary<string, (string fileName, MdDocument doc)> tablesDocs = [];
+        private readonly Dictionary<string, (string fileName, MdDocument doc)> securityRolesDocs = [];
 
         public SolutionMarkdownBuilder(SolutionDocumentationContent contentDocumentation)
         {
@@ -24,7 +24,7 @@ namespace PowerDocu.SolutionDocumenter
 
             addSolutionOverview();
             addSolutionComponents();
-            solutionDoc.Save(content.folderPath + "/" + solutionDocumentFileName);
+            solutionDoc.Save(Path.Combine(content.folderPath, solutionDocumentFileName));
             createOrderFile();
             NotificationHelper.SendNotification("Created Markdown documentation for solution" + content.solution.UniqueName);
         }
@@ -36,6 +36,12 @@ namespace PowerDocu.SolutionDocumenter
             tableRows.Add(new MdTableRow("Status", content.solution.isManaged ? "Managed" : "Unmanaged"));
             tableRows.Add(new MdTableRow("Version", content.solution.Version));
             solutionDoc.Root.Add(new MdTable(new MdTableRow("Property", "Details"), tableRows));
+
+            // Create `version.md`
+            var versionDoc = new MdDocument();
+            versionDoc.Root.Add(new MdParagraph(content.solution.Version));
+            versionDoc.Save(Path.Combine(content.folderPath, "version.md"));
+
             AddPublisherInfo();
             AddStatistics();
         }
@@ -367,8 +373,8 @@ namespace PowerDocu.SolutionDocumenter
                     securityRoleDoc.Root.Add(new MdTable(new MdTableRow("Miscellaneous Privilege", "Level"), miscPrivTableRows));
                 }
 
-                securityRoleDoc.Save(content.folderPath + "/" + securityRoleDocFileName);
-                securityRolesDocs[role.Name] = (content.folderPath + "/" + securityRoleDocFileName, securityRoleDoc);
+                securityRoleDoc.Save(Path.Combine(content.folderPath, securityRoleDocFileName));
+                securityRolesDocs[role.Name] = (securityRoleDocFileName, securityRoleDoc);
                 navItems.Add(new MdListItem(new MdLinkSpan(role.Name, securityRoleDocFileName)));
 
 
@@ -385,7 +391,7 @@ namespace PowerDocu.SolutionDocumenter
                 {
                     var (tablePath, tableDoc) = tablesDocs[securityRoleByTableName.Key];
 
-                    tableDoc.Root.Add(new MdHeading("Security Roles", 5));
+                    var securityTableDoc = new MdDocument();
                     var componentTableRows = new List<MdTableRow>();
                     foreach (var group in securityRoleByTableName.OrderBy(group => group.role.Name))
                     {
@@ -401,9 +407,9 @@ namespace PowerDocu.SolutionDocumenter
                         );
                         componentTableRows.Add(row);
                     }
-                    tableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
+                    securityTableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
 
-                    tableDoc.Save(tablePath);
+                    securityTableDoc.Save(Path.Combine(content.folderPath, "securityRole_" + tablePath));
                 }
             }
         }
@@ -416,11 +422,12 @@ namespace PowerDocu.SolutionDocumenter
             foreach (var tableEntity in content.solution.Customizations.getEntities())
             {
                 var tableDoc = new MdDocument();
-                var tableDocFileName = CharsetHelper.GetSafeName(tableEntity.getName()) + ".md";
+                var tableDocFileName = "table_" + CharsetHelper.GetSafeName(tableEntity.getName()) + ".md";
 
-                tableDoc.Root.Add(new MdHeading(tableEntity.getLocalizedName() + " (" + tableEntity.getName() + ")", 4));
                 var tableRows = new List<MdTableRow>
                 {
+                    new MdTableRow("Display Name", tableEntity.getLocalizedName()),
+                    new MdTableRow("Name", new MdCodeSpan(tableEntity.getName())),
                     new MdTableRow("Primary Column", tableEntity.getPrimaryColumn()),
                     new MdTableRow("Description", tableEntity.getDescription())
                 };
@@ -433,18 +440,18 @@ namespace PowerDocu.SolutionDocumenter
                     {
                         var primaryNameColumn = columnEntity.getDisplayMask().Contains("PrimaryName") ? " (Primary name column)" : "";
                         tableRows.Add(new MdTableRow(columnEntity.getDisplayName() + primaryNameColumn,
-                                                    columnEntity.getName(),
-                                                    columnEntity.getDataType(),
-                                                    columnEntity.isCustomizable().ToString(),
-                                                    columnEntity.isRequired().ToString(),
-                                                    columnEntity.isSearchable().ToString()
-                                                    ));
+                                                     new MdCodeSpan(columnEntity.getName()),
+                                                     columnEntity.getDataType(),
+                                                     columnEntity.isCustomizable().ToString(),
+                                                     columnEntity.isRequired().ToString(),
+                                                     columnEntity.isSearchable().ToString()
+                                                     ));
                     }
                     tableDoc.Root.Add(new MdTable(new MdTableRow("Display Name", "Name", "Data type", "Customizable", "Required", "Searchable"), tableRows));
                 }
 
-                tableDoc.Save(content.folderPath + "/" + tableDocFileName);
-                tablesDocs[tableEntity.getName()] = (content.folderPath + "/" + tableDocFileName, tableDoc);
+                tableDoc.Save(Path.Combine(content.folderPath, tableDocFileName));
+                tablesDocs[tableEntity.getName()] = (tableDocFileName, tableDoc);
                 navItems.Add(new MdListItem(new MdLinkSpan(tableEntity.getName(), tableDocFileName)));
             }
             solutionDoc.Root.Add(new MdBulletList(navItems));
@@ -455,7 +462,7 @@ namespace PowerDocu.SolutionDocumenter
 
         private MdImageSpan getAccessLevelIcon(AccessLevel accessLevel)
         {
-            Directory.CreateDirectory(content.folderPath + "Resources");
+            Directory.CreateDirectory(Path.Combine(content.folderPath, "Resources"));
             var iconFile = @"Resources\security-role-access-level-";
             iconFile += accessLevel switch
             {
@@ -465,9 +472,9 @@ namespace PowerDocu.SolutionDocumenter
                 AccessLevel.Basic => "basic.png",
                 _ => "none.png",
             };
-            if (!File.Exists(content.folderPath + iconFile))
+            if (!File.Exists(Path.Combine(content.folderPath, iconFile)))
             {
-                File.Copy(AssemblyHelper.GetExecutablePath() + iconFile, content.folderPath + iconFile);
+                File.Copy(Path.Combine(AssemblyHelper.GetExecutablePath(), iconFile), Path.Combine(content.folderPath, iconFile));
             }
 
             return new MdImageSpan(accessLevel.ToString(), iconFile.Replace(@"\", "/"));
@@ -488,7 +495,7 @@ namespace PowerDocu.SolutionDocumenter
 
         private void createOrderFile()
         {
-            using var sw = new StreamWriter($"{content.folderPath}/.order");
+            using var sw = new StreamWriter(Path.Combine(content.folderPath, ".order"));
             foreach (var flow in content.flows)
             {
                 sw.WriteLine(CharsetHelper.GetSafeName(@"FlowDoc " + flow.FileName));

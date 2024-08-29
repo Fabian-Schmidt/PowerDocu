@@ -1,6 +1,7 @@
 using PowerDocu.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace PowerDocu.FlowDocumenter
@@ -19,7 +20,7 @@ namespace PowerDocu.FlowDocumenter
         public FlowDocumentationContent(FlowEntity flow, string path, FlowActionSortOrder sortOrder = FlowActionSortOrder.SortByName)
         {
             NotificationHelper.SendNotification("Preparing documentation content for " + flow.Name);
-            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.FileName + @"\");
+            folderPath = Path.Combine(path, CharsetHelper.GetSafeName("FlowDoc " + flow.FileName));
             filename = CharsetHelper.GetSafeName(flow.FileName);
             metadata = new FlowMetadata(flow);
             overview = new FlowOverview();

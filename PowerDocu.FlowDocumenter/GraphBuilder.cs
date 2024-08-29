@@ -21,7 +21,7 @@ namespace PowerDocu.FlowDocumenter
         public GraphBuilder(FlowEntity flowToUse, string path)
         {
             flow = flowToUse;
-            folderPath = path + CharsetHelper.GetSafeName(@"\FlowDoc " + flow.FileName + @"\");
+            folderPath = Path.Combine(path, CharsetHelper.GetSafeName("FlowDoc " + flow.FileName));
             Directory.CreateDirectory(folderPath);
         }
 
@@ -73,7 +73,7 @@ namespace PowerDocu.FlowDocumenter
 
                 if (!String.IsNullOrEmpty(connectorIcon))
                 {
-                    var connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
+                    var connectorIcon32Path = Path.Combine(folderPath, Path.GetFileNameWithoutExtension(connectorIcon) + "32.png");
                     ImageHelper.ConvertImageTo32(connectorIcon, connectorIcon32Path);
                     //path to image is absolute here, as GraphViz wasn't able to render it properly if relative. Will be replaced in the SVG just before the PNG gets generated
                     var html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(flow.trigger.Name) + "</td></tr>";
@@ -92,28 +92,28 @@ namespace PowerDocu.FlowDocumenter
                 addEdgesToGraph(rootGraph, rootAction, trigger, null, null, showSubactions, true);
             }
             rootGraph.CreateLayout();
-            NotificationHelper.SendNotification("  - Created Graph " + folderPath + generateImageFiles(rootGraph, showSubactions) + ".png");
+            NotificationHelper.SendNotification("  - Created Graph " + Path.Combine(folderPath, generateImageFiles(rootGraph, showSubactions) + ".png"));
         }
 
         private string generateImageFiles(RootGraph rootGraph, bool showSubactions)
         {
             //Generate image files
             var filename = "flow" + (showSubactions ? "-detailed" : "");
-            rootGraph.ToPngFile(folderPath + filename + ".png");
-            rootGraph.ToSvgFile(folderPath + filename + ".svg");
+            rootGraph.ToPngFile(Path.Combine(folderPath, filename + ".png"));
+            rootGraph.ToSvgFile(Path.Combine(folderPath, filename + ".svg"));
 
             //updating the SVG, embedding any images as base64 content so that they are shown in the Word output
             var xmlDoc = new XmlDocument
             {
                 XmlResolver = null
             };
-            xmlDoc.Load(folderPath + filename + ".svg");
+            xmlDoc.Load(Path.Combine(folderPath, filename + ".svg"));
             var elemList = xmlDoc.GetElementsByTagName("image");
             foreach (XmlNode xn in elemList)
             {
                 xn.Attributes["xlink:href"].Value = "data:image/png;base64," + ImageHelper.GetBase64(xn.Attributes["xlink:href"].Value);
             }
-            xmlDoc.Save(folderPath + filename + ".svg");
+            xmlDoc.Save(Path.Combine(folderPath, filename + ".svg"));
             //the following code is no longer required, as saving directly to PNG is now possible through GraphViz. Keeping it in case it is required in the future
             /*
             // converting SVG to PNG
@@ -175,7 +175,7 @@ namespace PowerDocu.FlowDocumenter
 
                     if (!String.IsNullOrEmpty(connectorIcon))
                     {
-                        var connectorIcon32Path = folderPath + Path.GetFileNameWithoutExtension(connectorIcon) + "32.png";
+                        var connectorIcon32Path = Path.Combine(folderPath, Path.GetFileNameWithoutExtension(connectorIcon) + "32.png");
                         ImageHelper.ConvertImageTo32(connectorIcon, connectorIcon32Path);
                         //path to image is absolute here, as GraphViz wasn't able to render it properly if relative. Will be replaced in the SVG just before the PNG gets generated
                         var html = "<table border=\"0\"><tr><td><img src=\"" + connectorIcon32Path + "\" /></td><td>" + CharsetHelper.GetSafeName(node.Name) + "</td></tr>";
