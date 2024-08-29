@@ -9,14 +9,11 @@ on:
 jobs:
 
   build:
-
     strategy:
       matrix:
         Configuration: [Release]
-
     runs-on: ubuntu-latest   # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -36,19 +33,48 @@ jobs:
       run: dotnet test
 
     - name: Run build
-      run: dotnet build --configuration $env:Configuration --no-restore "PowerDocu.GUI"
-      env:
-        Configuration: ${{ matrix.configuration }}
+      run: dotnet build --configuration ${{ matrix.configuration }} --no-restore "PowerDocu.GUI"
       
     - name: Run publish
-      run: dotnet publish --configuration $env:Configuration -r win-x64 --self-contained true "PowerDocu.GUI"
-      env:
-        Configuration: ${{ matrix.configuration }}
+      run: dotnet publish --configuration ${{ matrix.configuration }} -r win-x64 --self-contained true "PowerDocu.GUI"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: PowerDocu-selfcontained
-        path: PowerDocu.GUI\bin\$env:configuration\net8.0-windows\win-x64
-      env:
-        Configuration: ${{ matrix.configuration }}
+        name: PowerDocu-${{ matrix.configuration }}-selfcontained
+        path: PowerDocu.GUI/bin/${{ matrix.configuration }}/net8.0-windows/win-x64/publish/
+        if-no-files-found: error
+
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: "PowerDocu-Release-selfcontained"
+        path: PowerDocu-Release-selfcontained
+        
+    - name: Create release zip
+      working-directory: PowerDocu-Release-selfcontained
+      run: zip -r ../PowerDocu-Release-selfcontained.zip *
+    
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_prefix: 'v-'
+  
+    - uses: ncipollo/release-action@v1
+      with:
+        draft: true
+        prerelease: true
+        artifacts: "PowerDocu-Release-selfcontained.zip"
+        tag: ${{ steps.tag_version.outputs.new_tag }}
+        name: Release ${{ steps.tag_version.outputs.new_tag }}
+
+        
+    
