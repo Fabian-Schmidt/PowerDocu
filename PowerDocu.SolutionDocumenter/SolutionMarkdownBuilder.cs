@@ -533,6 +533,43 @@ namespace PowerDocu.SolutionDocumenter
 
                 doc.Save(Path.Combine(content.folderPath, fileName));
             }
+
+            foreach (var tableEntity in content.solution.Customizations.getEntities())
+            {
+                var doc = new MdDocument();
+                var fileName = "optionset_table_" + CharsetHelper.GetSafeName(tableEntity.getName()) + ".md";
+
+                if (tableEntity.GetColumns().Count > 0)
+                {
+                    var optionSetNames = tableEntity.GetColumns()
+                        .Where(w => w.getDataType() == "picklist")
+                        .Select(s => s.getOptionSetName())
+                        .Distinct();
+
+                    foreach (var optionSetName in optionSetNames)
+                    {
+                        var optionSet = content.solution.Customizations.GetOptionSets().FirstOrDefault(w => w.getName().Equals(optionSetName));
+                        if (optionSet != null)
+                        {
+                            doc.Root.Add(new MdHeading(optionSet.getLocalizedName() + " (" + optionSet.getName() + ")", 4));
+
+                            var tableRows = new List<MdTableRow>();
+                            foreach (var optionsetValue in optionSet.GetOptions())
+                            {
+                                tableRows.Add(new MdTableRow(
+                                    new MdCodeSpan(optionsetValue.getValue().ToString()),
+                                    optionsetValue.GetLabel(),
+                                    optionsetValue.GetDescription()
+                                    ));
+                            }
+                            doc.Root.Add(new MdTable(new MdTableRow("Value", "Label", "Description"), tableRows));
+                        }
+                    }
+                }
+
+                // Save even empty file. So it can be used for links.
+                doc.Save(Path.Combine(content.folderPath, fileName));
+            }
         }
     }
 }
