@@ -247,6 +247,9 @@ namespace PowerDocu.SolutionDocumenter
                     case "Entity":
                         renderEntities();
                         break;
+                    case "Option Set":
+                        RenderOptionSet();
+                        goto default;
                     default:
                         solutionDoc.Root.Add(new MdHeading(componentType, 3));
                         var components = content.solution.Components.Where(c => c.Type == componentType).OrderBy(c => c.reqdepDisplayName).ToList();
@@ -345,6 +348,7 @@ namespace PowerDocu.SolutionDocumenter
                 var securityRoleDocFileName = CharsetHelper.GetSafeName("securityRole_" + role.ID + ".md").Replace(" ", "-");
 
                 securityRoleDoc.Root.Add(new MdHeading(role.Name + " (" + role.ID + ")", 4));
+
                 var componentTableRows = new List<MdTableRow>();
                 foreach (var tableAccess in role.Tables.OrderBy(o => o.Name))
                 {
@@ -504,6 +508,30 @@ namespace PowerDocu.SolutionDocumenter
             foreach (var app in content.apps)
             {
                 sw.WriteLine(CharsetHelper.GetSafeName(@"AppDoc " + app.Name));
+            }
+        }
+
+        private void RenderOptionSet()
+        {
+            foreach (var optionSet in content.solution.Customizations.GetOptionSets())
+            {
+                var doc = new MdDocument();
+                var fileName = CharsetHelper.GetSafeName("optionset_" + optionSet.getName() + ".md").Replace(" ", "-");
+
+                doc.Root.Add(new MdHeading(optionSet.getLocalizedName() + " (" + optionSet.getName() + ")", 4));
+
+                var tableRows = new List<MdTableRow>();
+                foreach (var optionsetValue in optionSet.GetOptions())
+                {
+                    tableRows.Add(new MdTableRow(
+                        new MdCodeSpan(optionsetValue.getValue().ToString()),
+                        optionsetValue.GetLabel(),
+                        optionsetValue.GetDescription()
+                        ));
+                }
+                doc.Root.Add(new MdTable(new MdTableRow("Value", "Label", "Description"), tableRows));
+
+                doc.Save(Path.Combine(content.folderPath, fileName));
             }
         }
     }
