@@ -126,7 +126,7 @@ namespace PowerDocu.FlowDocumenter
                 {
                     if (!kvp2.Key.Equals("Initial Value"))
                     {
-                        tableRows.Add(new MdTableRow(kvp2.Key, kvp2.Value));
+                        tableRows.Add(new MdTableRow(kvp2.Key, new MdCodeSpan(kvp2.Value)));
                     }
                 }
                 var table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
@@ -137,7 +137,7 @@ namespace PowerDocu.FlowDocumenter
                     content.variables.initialValTable.TryGetValue(kvp.Key, out var initialValues);
                     foreach (var initialVal in initialValues)
                     {
-                        tableRows.Add(new MdTableRow(initialVal.Key, initialVal.Value));
+                        tableRows.Add(new MdTableRow(new MdCodeSpan(initialVal.Key), new MdCodeSpan(initialVal.Value)));
                     }
                     if (tableRows.Count > 0)
                     {
@@ -179,7 +179,7 @@ namespace PowerDocu.FlowDocumenter
                 }
                 else
                 {
-                    tableRows.Add(new MdTableRow(kvp.Key, kvp.Value));
+                    tableRows.Add(new MdTableRow(kvp.Key, new MdCodeSpan(kvp.Value)));
                 }
             }
             var table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
@@ -306,7 +306,7 @@ namespace PowerDocu.FlowDocumenter
                     }
                     if (!String.IsNullOrEmpty(action.Inputs))
                     {
-                        tableRows.Add(new MdTableRow("Value", action.Inputs));
+                        tableRows.Add(new MdTableRow("Value", new MdCodeSpan(action.Inputs)));
                     }
                     table = new MdTable(new MdTableRow(new List<string>() { "Property", "Value" }), tableRows);
                     actionsDoc.Root.Add(table);
