@@ -391,30 +391,36 @@ namespace PowerDocu.SolutionDocumenter
 
             foreach (var securityRoleByTableName in securityRolesByTableName)
             {
+                var tablePath = string.Empty;
                 if (tablesDocs.ContainsKey(securityRoleByTableName.Key))
                 {
-                    var (tablePath, tableDoc) = tablesDocs[securityRoleByTableName.Key];
-
-                    var securityTableDoc = new MdDocument();
-                    var componentTableRows = new List<MdTableRow>();
-                    foreach (var group in securityRoleByTableName.OrderBy(group => group.role.Name))
-                    {
-                        var row = new MdTableRow(group.role.Name,
-                                               getAccessLevelIcon(group.tableAccess.Create),
-                                               getAccessLevelIcon(group.tableAccess.Read),
-                                               getAccessLevelIcon(group.tableAccess.Write),
-                                               getAccessLevelIcon(group.tableAccess.Delete),
-                                               getAccessLevelIcon(group.tableAccess.Append),
-                                               getAccessLevelIcon(group.tableAccess.AppendTo),
-                                               getAccessLevelIcon(group.tableAccess.Assign),
-                                               getAccessLevelIcon(group.tableAccess.Share)
-                        );
-                        componentTableRows.Add(row);
-                    }
-                    securityTableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
-
-                    securityTableDoc.Save(Path.Combine(content.folderPath, "securityRole_" + tablePath));
+                    (tablePath, _) = tablesDocs[securityRoleByTableName.Key];
                 }
+                if (string.IsNullOrEmpty(tablePath))
+                {
+                    // Table is not part of this solution package.
+                    tablePath = "table_" + CharsetHelper.GetSafeName(securityRoleByTableName.Key) + ".md";
+                }
+                var securityTableDoc = new MdDocument();
+                var componentTableRows = new List<MdTableRow>();
+                foreach (var group in securityRoleByTableName.OrderBy(group => group.role.Name))
+                {
+                    var row = new MdTableRow(group.role.Name,
+                                           getAccessLevelIcon(group.tableAccess.Create),
+                                           getAccessLevelIcon(group.tableAccess.Read),
+                                           getAccessLevelIcon(group.tableAccess.Write),
+                                           getAccessLevelIcon(group.tableAccess.Delete),
+                                           getAccessLevelIcon(group.tableAccess.Append),
+                                           getAccessLevelIcon(group.tableAccess.AppendTo),
+                                           getAccessLevelIcon(group.tableAccess.Assign),
+                                           getAccessLevelIcon(group.tableAccess.Share)
+                    );
+                    componentTableRows.Add(row);
+                }
+                securityTableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
+
+                securityTableDoc.Save(Path.Combine(content.folderPath, "securityRole_" + tablePath));
+
             }
         }
 
