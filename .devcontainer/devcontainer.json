@@ -20,7 +20,7 @@
     "codespaces": {
       "repositories": {
         "Fabian-Schmidt/PowerDocu.Common": {
-          "permissions": "write-all"
+          "contents": "write"
         }
       }
     }
