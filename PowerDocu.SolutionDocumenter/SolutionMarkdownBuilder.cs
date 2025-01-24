@@ -453,12 +453,13 @@ namespace PowerDocu.SolutionDocumenter
                         tableRows.Add(new MdTableRow(columnEntity.getDisplayName() + primaryNameColumn,
                                                      new MdCodeSpan(columnEntity.getName()),
                                                      columnEntity.getDataType(),
+                                                     columnEntity.getFieldLength(),
                                                      columnEntity.isCustomizable().ToString(),
                                                      columnEntity.isRequired().ToString(),
                                                      columnEntity.isSearchable().ToString()
                                                      ));
                     }
-                    tableDoc.Root.Add(new MdTable(new MdTableRow("Display Name", "Name", "Data type", "Customizable", "Required", "Searchable"), tableRows));
+                    tableDoc.Root.Add(new MdTable(new MdTableRow("Display Name", "Name", "Data type", "Field Length", "Customizable", "Required", "Searchable"), tableRows));
                 }
 
                 tableDoc.Save(Path.Combine(content.folderPath, tableDocFileName));
