@@ -4,10 +4,8 @@
 	"name": "C# (.NET)",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
-
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
-
 	// Configure tool-specific properties.
 	"customizations": {
 		// Configure properties specific to VS Code.
@@ -17,18 +15,16 @@
 				"streetsidesoftware.code-spell-checker"
 			]
 		},
-    "codespaces": {
-      "repositories": {
-        "Fabian-Schmidt/PowerDocu.Common": {
-          "contents": "write"
-        }
-      }
-    }
+		"codespaces": {
+			"repositories": {
+				"Fabian-Schmidt/PowerDocu.Common": {
+					"permissions": "write-all"
+				}
+			}
+		}
 	},
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "git submodule update --init --recursive && dotnet restore"
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
