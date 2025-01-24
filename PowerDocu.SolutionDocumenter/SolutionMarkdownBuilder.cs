@@ -417,6 +417,7 @@ namespace PowerDocu.SolutionDocumenter
                     );
                     componentTableRows.Add(row);
                 }
+                securityTableDoc.Root.Add(new MdParagraph(new MdRawMarkdownSpan("{.SecurityRoleTable}")));
                 securityTableDoc.Root.Add(new MdTable(new MdTableRow("Security Role", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
 
                 securityTableDoc.Save(Path.Combine(content.folderPath, "securityRole_" + tablePath));
