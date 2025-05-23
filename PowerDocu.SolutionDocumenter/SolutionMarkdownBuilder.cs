@@ -364,6 +364,8 @@ namespace PowerDocu.SolutionDocumenter
                     );
                     componentTableRows.Add(row);
                 }
+
+                securityRoleDoc.Root.Add(new MdParagraph(new MdRawMarkdownSpan("{.SecurityRoleTable}")));
                 securityRoleDoc.Root.Add(new MdTable(new MdTableRow("Table", "Create", "Read", "Write", "Delete", "Append", "Append To", "Assign", "Share"), componentTableRows));
 
                 if (role.miscellaneousPrivileges.Count > 0)
@@ -374,6 +376,7 @@ namespace PowerDocu.SolutionDocumenter
                     {
                         miscPrivTableRows.Add(new MdTableRow(miscPrivilege.Key, getAccessLevelIcon(miscPrivilege.Value)));
                     }
+                    securityRoleDoc.Root.Add(new MdParagraph(new MdRawMarkdownSpan("{.SecurityRoleTable}")));
                     securityRoleDoc.Root.Add(new MdTable(new MdTableRow("Miscellaneous Privilege", "Level"), miscPrivTableRows));
                 }
 
