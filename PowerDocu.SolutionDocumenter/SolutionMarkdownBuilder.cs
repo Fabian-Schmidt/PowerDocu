@@ -478,11 +478,11 @@ namespace PowerDocu.SolutionDocumenter
             var iconFile = @"Resources\security-role-access-level-";
             iconFile += accessLevel switch
             {
-                AccessLevel.Global => "global.png",
-                AccessLevel.Deep => "deep.png",
-                AccessLevel.Local => "local.png",
-                AccessLevel.Basic => "basic.png",
-                _ => "none.png",
+                AccessLevel.Global => "global.svg",
+                AccessLevel.Deep => "deep.svg",
+                AccessLevel.Local => "local.svg",
+                AccessLevel.Basic => "basic.svg",
+                _ => "none.svg",
             };
             if (!File.Exists(Path.Combine(content.folderPath, iconFile)))
             {
